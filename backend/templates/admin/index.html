@@ -1,0 +1,40 @@
+{% extends "admin/index.html" %}
+{% load i18n %}
+
+{% block content %}
+
+{# ── Live Dashboard Stats ── #}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">
+
+  <div style="background:linear-gradient(135deg,#0066cc,#0099ff);color:#fff;padding:20px 24px;border-radius:12px;box-shadow:0 4px 12px rgba(0,102,204,.25)">
+    <div style="font-size:13px;opacity:.85;text-transform:uppercase;letter-spacing:.6px">👥 Đang sử dụng (15 phút)</div>
+    <div style="font-size:42px;font-weight:800;margin-top:6px">{{ active_users }}</div>
+    <div style="font-size:12px;opacity:.7;margin-top:4px">người dùng đang hoạt động</div>
+  </div>
+
+  <div style="background:linear-gradient(135deg,#28a745,#52c970);color:#fff;padding:20px 24px;border-radius:12px;box-shadow:0 4px 12px rgba(40,167,69,.25)">
+    <div style="font-size:13px;opacity:.85;text-transform:uppercase;letter-spacing:.6px">🎧 Lượt nghe hôm nay</div>
+    <div style="font-size:42px;font-weight:800;margin-top:6px">{{ today_plays }}</div>
+    <div style="font-size:12px;opacity:.7;margin-top:4px">bài thuyết minh được phát</div>
+  </div>
+
+  {% if hot_pois %}
+  <div style="background:linear-gradient(135deg,#ff6a00,#ff9a44);color:#fff;padding:20px 24px;border-radius:12px;box-shadow:0 4px 12px rgba(255,106,0,.25)">
+    <div style="font-size:13px;opacity:.85;text-transform:uppercase;letter-spacing:.6px">🔥 POI hot nhất (1 giờ)</div>
+    <div style="margin-top:8px">
+      {% for poi in hot_pois %}
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.2)">
+          <span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%">{{ poi.poi__name }}</span>
+          <span style="background:rgba(255,255,255,.25);padding:1px 8px;border-radius:20px;font-size:12px;font-weight:700">{{ poi.count }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+{# ── Original app list ── #}
+{{ block.super }}
+
+{% endblock %}
