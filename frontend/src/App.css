@@ -1,0 +1,39 @@
+/* src/App.css - Reset và overrides nhỏ */
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --max-app-width: 480px;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Leaflet z-index fixes */
+.leaflet-pane {
+  z-index: 1;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 2;
+}
+
+/* Custom Leaflet popup */
+.leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  padding: 0;
+  overflow: hidden;
+}
+
+.leaflet-popup-content {
+  margin: 12px 16px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.leaflet-popup-tip-container {
+  display: none;
+}

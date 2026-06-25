@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NeonFoodmap - Bản đồ ẩm thực Sài Gòn</title>
+
+    <!-- Preconnect Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Preload critical fonts -->
+    <link rel="preload" as="style"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="preload" as="style"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+    <style>
+      /* Ẩn root cho đến khi font sẵn sàng */
+      #root { opacity: 0; transition: opacity 0.3s ease; }
+      #root.fonts-ready { opacity: 1; }
+
+      /* Loading screen hiện ngay, không cần React */
+      #app-loading {
+        position: fixed; inset: 0; z-index: 9999;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        background: linear-gradient(160deg, #ff6a00 0%, #ff8c3a 50%, #FFF8F0 100%);
+        transition: opacity 0.35s ease;
+      }
+      #app-loading.hide { opacity: 0; pointer-events: none; }
+      #app-loading .icon-wrap {
+        width: 96px; height: 96px; border-radius: 24px;
+        background: white; display: flex; align-items: center;
+        justify-content: center;
+        box-shadow: 0 20px 60px rgba(255,106,0,0.35);
+        margin-bottom: 24px;
+      }
+      #app-loading .icon-wrap svg { width: 56px; height: 56px; }
+      #app-loading h1 {
+        font-family: system-ui, sans-serif;
+        font-size: 28px; font-weight: 700;
+        color: white; margin: 0 0 6px;
+        letter-spacing: -0.5px;
+      }
+      #app-loading p {
+        font-family: system-ui, sans-serif;
+        font-size: 14px; color: rgba(255,255,255,0.85); margin: 0 0 32px;
+      }
+      #app-loading .spinner {
+        width: 36px; height: 36px; border-radius: 50%;
+        border: 3px solid rgba(255,255,255,0.35);
+        border-top-color: white;
+        animation: ldSpin 0.8s linear infinite;
+      }
+      @keyframes ldSpin { to { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body>
+    <!-- Loading screen thuần HTML — hiện NGAY, không cần JS/React -->
+    <div id="app-loading">
+      <div class="icon-wrap">
+        <!-- Bowl icon inline SVG -->
+        <svg viewBox="0 0 24 24" fill="#ff6a00" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 3C7.03 3 3 6.58 3 11h18c0-4.42-4.03-8-9-8zm-9 9a9 9 0 0 0 18 0H3zm7 9h4l1-2H9l1 2z"/>
+        </svg>
+      </div>
+      <h1>NeonFoodmap</h1>
+      <p>Bản đồ ẩm thực Sài Gòn</p>
+      <div class="spinner"></div>
+    </div>
+
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+
+    <script>
+      // Chờ tất cả font (kể cả Material Symbols) load xong rồi mới reveal app
+      document.fonts.ready.then(function() {
+        var loading = document.getElementById('app-loading');
+        var root = document.getElementById('root');
+        if (root) root.classList.add('fonts-ready');
+        if (loading) {
+          loading.classList.add('hide');
+          setTimeout(function() { loading.remove(); }, 400);
+        }
+      });
+    </script>
+  </body>
+</html>
