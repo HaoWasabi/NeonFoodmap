@@ -1,0 +1,574 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  NeonFoodmap IAM Setup — FCAJ Intern HK3 NH2526
+  Creates all IAM Groups, Policies, and Users for the 5 team members.
+  Deployer: Diep Thuy An (Root Owner / IAM Admin)
+# ─────────────────────────────────────────────────────────────────────────────
+# PARAMETERS — Customize temporary passwords for each member before deploying
+# ─────────────────────────────────────────────────────────────────────────────
+Parameters:
+
+  ProjectName:
+    Type: String
+    Default: NeonFoodmap
+    Description: Project name, used as a prefix for all resource names
+
+  AnPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    Description: "IAM User password for Diep Thuy An (thuyan_admin) — minimum 8 characters"
+
+  TuanGiaiTempPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    Description: "Temporary password for Luong Tuan Giai — must be changed at first login"
+
+  GiaHaoTempPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    Description: "Temporary password for Gia Hao — must be changed at first login"
+
+  CamDaoTempPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    Description: "Temporary password for Cam Dao — must be changed at first login"
+
+  LongTempPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    Description: "Temporary password for Long — must be changed at first login"
+
+  MonthlyBudgetAmount:
+    Type: Number
+    Default: 15
+    MinValue: 1
+    Description: "Monthly budget (USD) — Alert 50% / 70% / 90% forecast"
+
+  AlertEmail:
+    Type: String
+    Description: "DevOps Admin email to receive all cost alerts (e.g. your-email@gmail.com)"
+
+  LeaderEmail:
+    Type: String
+    Description: "Project Leader email to receive cost alerts (e.g. leader-email@gmail.com)"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RESOURCES
+# ─────────────────────────────────────────────────────────────────────────────
+Resources:
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # SECTION 1: CUSTOM POLICY — Force MFA
+  # Block all operations if the user has not enabled MFA.
+  # ───────────────────────────────────────────────────────────────────────────
+
+  ForceMFAPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub "${ProjectName}-Force-MFA"
+      Description: "Force all IAM users to enable MFA before performing any AWS actions"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          # Cho phép xem thông tin account (không cần MFA)
+          - Sid: AllowViewAccountInfo
+            Effect: Allow
+            Action:
+              - iam:GetAccountPasswordPolicy
+              - iam:ListVirtualMFADevices
+            Resource: "*"
+
+          # Cho phép tự quản lý MFA của chính mình (không cần MFA để làm bước này)
+          - Sid: AllowManageOwnMFA
+            Effect: Allow
+            Action:
+              - iam:CreateVirtualMFADevice
+              - iam:EnableMFADevice
+              - iam:GetUser
+              - iam:ListMFADevices
+              - iam:ResyncMFADevice
+            # Resource scope giới hạn chỉ chính user đó — ${!aws:username} là IAM policy variable (dấu ! để CFN không resolve)
+            Resource:
+              - !Sub "arn:aws:iam::${AWS::AccountId}:mfa/*"
+              - !Sub "arn:aws:iam::${AWS::AccountId}:user/*"
+
+          # Từ chối tất cả actions khác nếu chưa có MFA
+          - Sid: DenyAllWithoutMFA
+            Effect: Deny
+            NotAction:
+              - iam:CreateVirtualMFADevice
+              - iam:EnableMFADevice
+              - iam:GetUser
+              - iam:ListMFADevices
+              - iam:ResyncMFADevice
+              - iam:GetAccountPasswordPolicy
+              - iam:ListVirtualMFADevices
+              - sts:GetSessionToken
+            Resource: "*"
+            Condition:
+              BoolIfExists:
+                "aws:MultiFactorAuthPresent": "false"
+
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # SECTION 2: IAM USER GROUPS
+  # ───────────────────────────────────────────────────────────────────────────
+
+  # Group 1: DevOps Admins
+  DevOpsAdminsGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: !Sub "${ProjectName}-DevOps-Admins"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+        - !Ref ForceMFAPolicy
+
+  # Group 2: Backend Devs
+  BackendDevsGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: !Sub "${ProjectName}-Backend-Devs"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+        - arn:aws:iam::aws:policy/AmazonECS_FullAccess
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess
+        - arn:aws:iam::aws:policy/AmazonRDSFullAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/CloudWatchFullAccess
+        - arn:aws:iam::aws:policy/AmazonSQSFullAccess
+        - !Ref ForceMFAPolicy
+
+  # Group 3: Frontend Devs
+  FrontendDevsGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: !Sub "${ProjectName}-Frontend-Devs"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/CloudFrontFullAccess
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess
+        - !Ref ForceMFAPolicy
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # SECTION 3: IAM USERS
+  # ───────────────────────────────────────────────────────────────────────────
+
+  # User 1
+  UserDiepAn:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: thuyan
+      LoginProfile:
+        Password: !Ref AnPassword
+        PasswordResetRequired: false
+      Groups:
+        - !Ref DevOpsAdminsGroup
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Role
+          Value: DevOps-Admin
+        - Key: Owner
+          Value: an
+
+  # User 2
+  UserTuanGiai:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: tuangiai
+      LoginProfile:
+        Password: !Ref TuanGiaiTempPassword
+        PasswordResetRequired: true
+      Groups:
+        - !Ref DevOpsAdminsGroup
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Role
+          Value: Leader
+        - Key: Owner
+          Value: tuangiai
+
+  # User 3
+  UserGiaHao:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: giahao
+      LoginProfile:
+        Password: !Ref GiaHaoTempPassword
+        PasswordResetRequired: true
+      Groups:
+        - !Ref BackendDevsGroup
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Role
+          Value: Backend
+        - Key: Owner
+          Value: giahao
+
+  # User 4
+  UserCamDao:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: camdao
+      LoginProfile:
+        Password: !Ref CamDaoTempPassword
+        PasswordResetRequired: true
+      Groups:
+        - !Ref BackendDevsGroup
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Role
+          Value: Backend
+        - Key: Owner
+          Value: camdao
+
+  # User 5
+  UserLong:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: long
+      LoginProfile:
+        Password: !Ref LongTempPassword
+        PasswordResetRequired: true
+      Groups:
+        - !Ref FrontendDevsGroup
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Role
+          Value: Frontend
+        - Key: Owner
+          Value: long
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 4: IAM ROLES — cho Services & CI/CD
+# ─────────────────────────────────────────────────────────────────────────────
+
+  # ── OIDC Provider cho GitHub Actions ──────────────────────────────────────
+  # Cho phép GitHub Actions assume role mà không cần Access Key
+  GitHubOIDCProvider:
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: "https://token.actions.githubusercontent.com"
+      ClientIdList:
+        - "sts.amazonaws.com"
+      ThumbprintList:
+        - "6938fd4d98bab03faadb97b34396831e3780aea1"
+        - "1c58a3a8518e8759bf075b76b750d4f2df264fcd"
+
+  # ── Role 1: ECS Task Role (Backend App) ───────────────────────────────────
+  # Backend container được phép gọi S3, Polly, SQS, CloudWatch — không cần hardcode keys
+  ECSBackendRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-ECS-Backend-Role"
+      Description: "Task role for NeonFoodmap backend ECS tasks - access S3, Polly, SQS, CloudWatch"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AmazonPollyFullAccess
+        - arn:aws:iam::aws:policy/AmazonSQSFullAccess
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+        - arn:aws:iam::aws:policy/AmazonRDSDataFullAccess
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Service
+          Value: ECS-Backend
+
+  # ── Role 2: ECS Task Execution Role ───────────────────────────────────────
+  # ECS cần role này để pull image từ ECR và ghi logs — khác với Task Role ở trên
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-ECS-TaskExecution-Role"
+      Description: "Execution role for ECS to pull ECR images and send logs to CloudWatch"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Service
+          Value: ECS-TaskExecution
+
+  # ── Role 3: GitHub Actions Role (CI/CD) ───────────────────────────────────
+  # GitHub Actions workflow được phép push ECR image và deploy lên ECS
+  # Chỉ trust đúng repo — thay <GITHUB_ORG> và <REPO_NAME> bằng giá trị thực
+  GitHubActionsRole:
+    Type: AWS::IAM::Role
+    DependsOn: GitHubOIDCProvider
+    Properties:
+      RoleName: !Sub "${ProjectName}-GitHub-Actions-Role"
+      Description: "Role for GitHub Actions CI/CD - push to ECR and deploy to ECS"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Sub "arn:aws:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com"
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+              StringLike:
+                "token.actions.githubusercontent.com:sub": "repo:HaoWasabi/NeonFoodmap:*"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser
+        - arn:aws:iam::aws:policy/AmazonECS_FullAccess
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Service
+          Value: GitHub-Actions
+
+  # ── Role 4: EC2 Instance Profile Role (nếu dùng EC2 thay vì ECS) ─────────
+  EC2BackendRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-EC2-Backend-Role"
+      Description: "Instance role for NeonFoodmap backend running on EC2"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AmazonPollyFullAccess
+        - arn:aws:iam::aws:policy/AmazonSQSFullAccess
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Service
+          Value: EC2-Backend
+
+  # Instance Profile bọc EC2 role — cần thiết để gán role cho EC2
+  EC2BackendInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub "${ProjectName}-EC2-Backend-InstanceProfile"
+      Roles:
+        - !Ref EC2BackendRole
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # SECTION 5: BUDGET & COST ALERTS
+  # Cảnh báo chi phí theo 3 mức — An và Tuấn Giai nhận email
+  # ───────────────────────────────────────────────────────────────────────────
+
+  # SNS Topic — kênh gửi email alert, cả An lẫn Tuấn Giai subscribe vào đây
+  BillingAlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "${ProjectName}-billing-alerts"
+      Subscription:
+        - Protocol: email
+          Endpoint: !Ref AlertEmail
+        - Protocol: email
+          Endpoint: !Ref LeaderEmail
+
+  # Budget chính — $15/tháng, 3 mức alert: 50% / 70% / 90%
+  MonthlyBudget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: !Sub "${ProjectName}-Monthly-Budget"
+        BudgetType: COST
+        TimeUnit: MONTHLY
+        BudgetLimit:
+          Amount: !Ref MonthlyBudgetAmount   # 15 USD
+          Unit: USD
+        CostFilters:
+          TagKeyValue:
+            - !Sub "user:Project$${ProjectName}"   # Chỉ tính chi phí resource có tag Project=NeonFoodmap
+      NotificationsWithSubscribers:
+
+        # Alert 1 — 50% thực tế ($7.5): nhắc nhở nhẹ, kiểm tra xem có gì bất thường không
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 50
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref AlertEmail
+            - SubscriptionType: EMAIL
+              Address: !Ref LeaderEmail
+
+        # Alert 2 — 70% thực tế ($10.5): cần xem xét tắt bớt services không dùng
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 70
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref AlertEmail
+            - SubscriptionType: EMAIL
+              Address: !Ref LeaderEmail
+
+        # Alert 3 — 90% dự báo ($13.5): nguy hiểm, dự báo sẽ vượt budget cuối tháng
+        - Notification:
+            NotificationType: FORECASTED
+            ComparisonOperator: GREATER_THAN
+            Threshold: 90
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref AlertEmail
+            - SubscriptionType: EMAIL
+              Address: !Ref LeaderEmail
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # SECTION 6: COST ANOMALY DETECTION
+  # AWS ML tự động phát hiện chi phí tăng đột biến bất thường
+  # ───────────────────────────────────────────────────────────────────────────
+
+  CostAnomalyMonitor:
+    Type: AWS::CE::AnomalyMonitor
+    Properties:
+      MonitorName: !Sub "${ProjectName}-Anomaly-Monitor"
+      MonitorType: CUSTOM
+      MonitorSpecification: !Sub |
+        {
+          "And": null,
+          "CostCategories": null,
+          "Dimensions": null,
+          "Not": null,
+          "Or": null,
+          "Tags": {
+            "Key": "Project",
+            "MatchOptions": ["EQUALS"],
+            "Values": ["${ProjectName}"]
+          }
+        }
+
+  # Subscription — cấu hình ngưỡng và email nhận alert anomaly
+  # Báo khi phát hiện chi phí bất thường vượt $3
+  # (nhỏ hơn budget alert để phát hiện sớm — ví dụ: EC2 bỗng tốn $3 hơn bình thường là đáng ngờ)
+  CostAnomalySubscription:
+    Type: AWS::CE::AnomalySubscription
+    DependsOn: CostAnomalyMonitor
+    Properties:
+      SubscriptionName: !Sub "${ProjectName}-Anomaly-Alert"
+      MonitorArnList:
+        - !GetAtt CostAnomalyMonitor.MonitorArn
+      Subscribers:
+        - Address: !Ref AlertEmail
+          Type: EMAIL
+        - Address: !Ref LeaderEmail
+          Type: EMAIL
+      Threshold: 3          # Báo khi anomaly vượt $3 — đủ nhạy nhưng không spam
+      Frequency: DAILY      # Tổng hợp và gửi 1 lần/ngày (không gửi realtime để tránh spam)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OUTPUTS — Thông tin sau khi deploy xong
+# ─────────────────────────────────────────────────────────────────────────────
+Outputs:
+
+  ECSBackendRoleArn:
+    Description: "ARN của ECS Backend Task Role — dùng trong ECS Task Definition (Task Role)"
+    Value: !GetAtt ECSBackendRole.Arn
+
+  ECSTaskExecutionRoleArn:
+    Description: "ARN của ECS Task Execution Role — dùng trong ECS Task Definition (Task Execution Role)"
+    Value: !GetAtt ECSTaskExecutionRole.Arn
+
+  GitHubActionsRoleArn:
+    Description: "ARN của GitHub Actions Role — lưu vào GitHub Secrets với tên AWS_ROLE_ARN"
+    Value: !GetAtt GitHubActionsRole.Arn
+
+  EC2InstanceProfileName:
+    Description: "Tên Instance Profile — gán cho EC2 instances khi launch"
+    Value: !Ref EC2BackendInstanceProfile
+
+  BudgetName:
+    Description: "Tên Budget đã tạo — xem tại Billing > Budgets"
+    Value: !Sub "${ProjectName}-Monthly-Budget"
+
+  BudgetAmount:
+    Description: "Ngân sách tháng (USD)"
+    Value: !Sub "${MonthlyBudgetAmount} USD — Alert tại 50% ($7.5), 70% ($10.5), 90% forecast ($13.5)"
+
+  AnomalyMonitorArn:
+    Description: "ARN của Cost Anomaly Monitor — báo khi chi phí tăng đột biến > $3"
+    Value: !GetAtt CostAnomalyMonitor.MonitorArn
+
+  AlertRecipients:
+    Description: "Email nhận tất cả cảnh báo chi phí"
+    Value: !Sub "${AlertEmail} và ${LeaderEmail}"
+
+  HowToCheckByUser:
+    Description: "Cách xem IAM user nào đang tốn tiền"
+    Value: >
+      Budget alert không phân biệt IAM user — chi phí tính theo service/resource.
+      Để biết ai tốn: Cost Explorer > Group by Tag > chọn Tag 'Owner'.
+      Yêu cầu mọi người gắn tag Owner khi tạo resource (Owner=giahao, Owner=long...).
+      Chi tiết hơn: CloudTrail > Event history > filter by username.
+
+  TodoAfterDeploy:
+    Description: "Việc phải làm thủ công sau khi deploy CloudFormation"
+    Value: >
+      1. Xác nhận email subscription: An và Tuấn Giai check hộp thư, bấm Confirm Subscription trong email từ AWS SNS.
+      2. Bật Cost Explorer: Billing > Cost Explorer > Enable (chờ 24h).
+      3. Lưu GitHubActionsRoleArn vào GitHub Secrets (AWS_ROLE_ARN) tại repo HaoWasabi/NeonFoodmap.
+      4. Bật MFA cho Root account (thủ công).
+      5. Mỗi thành viên tự bật MFA sau khi nhận tài khoản.
+      6. Yêu cầu nhóm gắn tag Owner=<tên> khi tạo bất kỳ resource nào trên AWS.
+
+  ConsoleLoginURL:
+    Description: "Link đăng nhập AWS Console cho tất cả IAM Users"
+    Value: !Sub "https://${AWS::AccountId}.signin.aws.amazon.com/console"
+
+  DevOpsAdminsGroupName:
+    Description: "Tên IAM Group cho DevOps Admins (An + Tuấn Giai)"
+    Value: !Ref DevOpsAdminsGroup
+
+  BackendDevsGroupName:
+    Description: "Tên IAM Group cho Backend Devs (Gia Hào + Cẩm Đào)"
+    Value: !Ref BackendDevsGroup
+
+  FrontendDevsGroupName:
+    Description: "Tên IAM Group cho Frontend Devs (Long)"
+    Value: !Ref FrontendDevsGroup
+
+  ForceMFAPolicyArn:
+    Description: "ARN của policy Force MFA — đã gán vào tất cả groups"
+    Value: !Ref ForceMFAPolicy
+
+  DeployedUsers:
+    Description: "Danh sách IAM Users đã tạo"
+    Value: "thuyan_admin, tuangiai_admin, giahao_backend, camdao_backend, long_frontend"
+
+  ImportantReminder:
+    Description: "Nhắc nhở sau khi deploy"
+    Value: >
+      QUAN TRỌNG: Gửi Console Login URL + username + temp password cho từng thành viên qua DM riêng.
+      Mỗi thành viên phải: (1) Đổi mật khẩu, (2) Bật MFA ngay lần đầu đăng nhập.
+      An phải bật MFA cho cả Root account lẫn IAM User thuyan_admin.
+
