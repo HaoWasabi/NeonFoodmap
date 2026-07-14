@@ -1,0 +1,50 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+
+# Environment
+.env
+.env.*
+
+# Static & Media (managed via volumes)
+media/
+staticfiles/
+
+# Test & Coverage
+.pytest_cache/
+htmlcov/
+coverage/
+
+# Type checking cache
+.mypy_cache/
+
+# Logs
+*.log
+logs/
+
+# Docker files
+Dockerfile
+docker-compose*.yml
+
+# Git
+.git/
+.gitignore
+
+# Editor & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Docs
+*.md
+README*
+
+# Temporary scripts
+fix_poi11.py
+check_tours.py
