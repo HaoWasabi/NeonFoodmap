@@ -116,6 +116,55 @@ Resources:
 
 
   # ───────────────────────────────────────────────────────────────────────────
+  # SECTION 1b: CUSTOM POLICY — Self-Service IAM
+  # Cho phép mọi user: xem danh sách users, tự quản lý access key, đổi mật khẩu
+  # ───────────────────────────────────────────────────────────────────────────
+
+  SelfServicePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub "${ProjectName}-Self-Service"
+      Description: "Allow users to view IAM users, manage own access keys, and change own password"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          # Xem danh sách tất cả IAM Users và thông tin cơ bản
+          - Sid: AllowListAndViewIAMUsers
+            Effect: Allow
+            Action:
+              - iam:ListUsers
+              - iam:GetUser
+              - iam:ListGroupsForUser
+              - iam:ListUserTags
+            Resource: "*"
+
+          # Tự quản lý Access Key của chính mình
+          - Sid: AllowManageOwnAccessKeys
+            Effect: Allow
+            Action:
+              - iam:CreateAccessKey
+              - iam:DeleteAccessKey
+              - iam:UpdateAccessKey
+              - iam:ListAccessKeys
+            Resource: !Sub "arn:aws:iam::${AWS::AccountId}:user/${!aws:username}"
+
+          # Đổi mật khẩu của chính mình (lần đầu đăng nhập và các lần sau)
+          - Sid: AllowChangeOwnPassword
+            Effect: Allow
+            Action:
+              - iam:ChangePassword
+              - iam:GetLoginProfile
+              - iam:UpdateLoginProfile
+            Resource: !Sub "arn:aws:iam::${AWS::AccountId}:user/${!aws:username}"
+
+          # Xem password policy của account (cần thiết khi đổi mật khẩu)
+          - Sid: AllowViewPasswordPolicy
+            Effect: Allow
+            Action:
+              - iam:GetAccountPasswordPolicy
+            Resource: "*"
+
+  # ───────────────────────────────────────────────────────────────────────────
   # SECTION 2: IAM USER GROUPS
   # ───────────────────────────────────────────────────────────────────────────
 
@@ -127,6 +176,7 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AdministratorAccess
         - !Ref ForceMFAPolicy
+        - !Ref SelfServicePolicy
 
   # Group 2: Backend Devs
   BackendDevsGroup:
@@ -134,14 +184,13 @@ Resources:
     Properties:
       GroupName: !Sub "${ProjectName}-Backend-Devs"
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonEC2FullAccess
         - arn:aws:iam::aws:policy/AmazonECS_FullAccess
         - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess
         - arn:aws:iam::aws:policy/AmazonRDSFullAccess
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
         - arn:aws:iam::aws:policy/CloudWatchFullAccess
-        - arn:aws:iam::aws:policy/AmazonSQSFullAccess
         - !Ref ForceMFAPolicy
+        - !Ref SelfServicePolicy
 
   # Group 3: Frontend Devs
   FrontendDevsGroup:
@@ -154,6 +203,7 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
         - arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess
         - !Ref ForceMFAPolicy
+        - !Ref SelfServicePolicy
 
   # ───────────────────────────────────────────────────────────────────────────
   # SECTION 3: IAM USERS
@@ -282,8 +332,6 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
-        - arn:aws:iam::aws:policy/AmazonPollyFullAccess
-        - arn:aws:iam::aws:policy/AmazonSQSFullAccess
         - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
         - arn:aws:iam::aws:policy/AmazonRDSDataFullAccess
       Tags:
@@ -359,8 +407,6 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
-        - arn:aws:iam::aws:policy/AmazonPollyFullAccess
-        - arn:aws:iam::aws:policy/AmazonSQSFullAccess
         - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
       Tags:
         - Key: Project
@@ -571,4 +617,3 @@ Outputs:
       QUAN TRỌNG: Gửi Console Login URL + username + temp password cho từng thành viên qua DM riêng.
       Mỗi thành viên phải: (1) Đổi mật khẩu, (2) Bật MFA ngay lần đầu đăng nhập.
       An phải bật MFA cho cả Root account lẫn IAM User thuyan_admin.
-
