@@ -16,10 +16,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dev-key-change-in-production')
 
-DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['*', 'localhost', '127.0.0.1', '.ngrok-free.app', '.ngrok-free.dev']
-
+ALLOWED_HOSTS_STR = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS_STR.split(',') if h.strip()]
+if DEBUG:
+    ALLOWED_HOSTS += ['.ngrok-free.app', '.ngrok-free.dev']
 
 # Application definition
 INSTALLED_APPS = [
@@ -140,8 +142,16 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '30/minute',
+        'user': '100/minute',
+    },
     # Không đặt DEFAULT_PAGINATION_CLASS toàn cục để tránh làm vỡ các API list đơn giản.
     # View nào cần pagination thì tự set pagination_class.
 }
@@ -221,8 +231,7 @@ if CLOUDINARY_URL:
             'API_KEY': match.group('key'),
             'API_SECRET': match.group('secret'),
         }
-
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+        DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 
 # VNPay configuration
@@ -237,7 +246,7 @@ VNPAY_FRONTEND_RETURN_URL = os.getenv('VNPAY_FRONTEND_RETURN_URL', 'http://local
 PAYPAL_CLIENT_ID = os.getenv('PAYPAL_CLIENT_ID', '')
 PAYPAL_SECRET = os.getenv('PAYPAL_SECRET', '')
 PAYPAL_BASE = os.getenv('PAYPAL_BASE', 'https://api-m.sandbox.paypal.com')
-
+VND_TO_USD_RATE = float(os.getenv('PAYPAL_VND_TO_USD_RATE', '25000'))
 # Partner premium price is managed in Django Admin (payments.PaymentConfig).
 
 # Reverse proxy (Caddy/nginx) terminating HTTPS — set BEHIND_HTTPS_PROXY=true in production

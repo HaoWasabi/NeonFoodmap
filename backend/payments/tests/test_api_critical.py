@@ -11,6 +11,12 @@ User = get_user_model()
 
 
 class PaymentsAPICriticalTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testpayer', email='testpayer@example.com', password='x'
+        )
+        self.client.force_authenticate(user=self.user)
+
     def test_paypal_create_order_requires_invoice_id(self):
         r = self.client.post('/api/payments/paypal/create-order/', {}, format='json')
         self.assertEqual(r.status_code, 400)
@@ -28,13 +34,8 @@ class PaymentsAPICriticalTests(APITestCase):
     @override_settings(PAYPAL_CLIENT_ID='', PAYPAL_SECRET='')
     def test_paypal_create_order_returns_500_when_paypal_not_configured(self):
         """Deterministic: empty PayPal credentials return 500 (ignores host env / .env)."""
-        user = User.objects.create_user(
-            username='payer',
-            email='payer@example.com',
-            password='x',
-        )
         inv = Invoice.objects.create(
-            user=user,
+            user=self.user,
             amount=1000,
             reason='test',
             status=Invoice.Status.PENDING,

@@ -1,4 +1,5 @@
 import uuid
+import re
 
 import requests
 from django.conf import settings
@@ -15,10 +16,10 @@ from .serializers import InvoiceCreateSerializer, InvoiceSerializer
 
 
 class InvoiceListCreateView(generics.ListCreateAPIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        return Invoice.objects.all().order_by('-created_at')
+        return Invoice.objects.filter(user=self.request.user).order_by('-created_at')
     
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -32,21 +33,12 @@ class InvoiceListCreateView(generics.ListCreateAPIView):
         return Response(InvoiceSerializer(invoice).data, status=201)
 
 
-class InvoiceCreateView(generics.CreateAPIView):
-    serializer_class = InvoiceCreateSerializer
-    permission_classes = [permissions.AllowAny]
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        invoice = serializer.save()
-        return Response(InvoiceSerializer(invoice).data, status=201)
-
-
 class InvoiceDetailView(generics.RetrieveAPIView):
-    queryset = Invoice.objects.all()
     serializer_class = InvoiceSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Invoice.objects.filter(user=self.request.user)
 
 
 def _sync_partner_premium_entitlement(invoice: Invoice) -> None:
@@ -66,7 +58,7 @@ def _sync_partner_premium_entitlement(invoice: Invoice) -> None:
 
 
 @api_view(['POST'])
-@permission_classes([permissions.AllowAny])
+@permission_classes([permissions.IsAuthenticated])
 def paypal_create_order(request):
     invoice_id = request.data.get('invoiceId', '')
 
@@ -119,8 +111,12 @@ def paypal_create_order(request):
 
 
 @api_view(['POST'])
-@permission_classes([permissions.AllowAny])
+@permission_classes([permissions.IsAuthenticated])
 def paypal_capture_order(request, order_id: str):
+    # Validate PayPal order ID format (alphanumeric + dashes)
+    if not re.match(r'^[A-Za-z0-9\-]+$', order_id):
+        return Response({'error': 'Invalid order_id format.'}, status=400)
+
     if not settings.PAYPAL_CLIENT_ID or not settings.PAYPAL_SECRET:
         return Response({'error': 'PayPal is not configured.'}, status=500)
 

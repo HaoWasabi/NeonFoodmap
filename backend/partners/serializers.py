@@ -36,18 +36,16 @@ class PartnerSerializer(serializers.ModelSerializer):
         if lang == 'vi':
             return obj.intro_text
         
+        from core.utils import translate_text
         # PartnerIntroMedia is related via 'intro_media'
         # We can't easily prefetch here without changing the calling view,
         # but for a single POI detail it's fine.
         intro = obj.intro_media.filter(language=lang, status=1).first()
-        if intro:
-            # Note: PartnerIntroMedia references a media_id. 
-            # If we want the text, we might need to look up the Media model or 
-            # if we added a text field to PartnerIntroMedia later.
-            # Wait, looking at models.py again.
-            pass
-        
-        return obj.intro_text
+        if intro and hasattr(intro, 'translated_text') and intro.translated_text:
+            return intro.translated_text
+            
+        # Fallback: dịch tự động
+        return translate_text(obj.intro_text, lang)
 
 
 class PartnerCRUDSerializer(serializers.ModelSerializer):

@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.exceptions import ValidationError
@@ -150,22 +151,24 @@ class PartnerProfileView(generics.RetrieveUpdateAPIView):
                 business_name = self.request.data.get('business_name')
                 if not business_name:
                     from rest_framework.exceptions import NotFound
-
                     raise NotFound('No Partner profile found (missing business_name).')
 
-                return Partner.objects.create(
-                    user=user,
-                    business_name=business_name,
-                    address=self.request.data.get('address', '') or '',
-                    intro_text=self.request.data.get('intro_text', '') or '',
-                    opening_hours=self.request.data.get('opening_hours', '') or '',
-                    qr_url=self.request.data.get('qr_url', '') or '',
-                    menu_details=self.request.data.get('menu_details', {}) or {},
-                    status=self.request.data.get('status', Partner.Status.PENDING_APPROVAL),
-                )
+                with transaction.atomic():
+                    partner, created = Partner.objects.get_or_create(
+                        user=user,
+                        defaults={
+                            'business_name': business_name,
+                            'address': self.request.data.get('address', '') or '',
+                            'intro_text': self.request.data.get('intro_text', '') or '',
+                            'opening_hours': self.request.data.get('opening_hours', '') or '',
+                            'qr_url': self.request.data.get('qr_url', '') or '',
+                            'menu_details': self.request.data.get('menu_details', {}) or {},
+                            'status': self.request.data.get('status', Partner.Status.PENDING_APPROVAL),
+                        }
+                    )
+                return partner
 
             from rest_framework.exceptions import NotFound
-
             raise NotFound('No Partner profile found.')
 
 

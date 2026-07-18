@@ -95,24 +95,35 @@ class NarrationStartView(APIView):
         poi = serializer.validated_data['poi']
 
         # ----------------------------------------------------------------
-        # Anti-Spam check (chỉ áp dụng cho trigger AUTO và user đã đăng nhập)
+        # Anti-Spam check (áp dụng cho trigger AUTO — cả user đã login và anonymous)
         # ----------------------------------------------------------------
-        if trigger_type == NarrationLog.TriggerType.AUTO and request.user.is_authenticated:
+        if trigger_type == NarrationLog.TriggerType.AUTO:
             cutoff = timezone.now() - timedelta(minutes=ANTI_SPAM_MINUTES)
-            already_played = NarrationLog.objects.filter(
-                user=request.user,
-                poi=poi,
-                trigger_type=NarrationLog.TriggerType.AUTO,
-                start_time__gte=cutoff,
-                status=NarrationLog.Status.ACTIVE,
-            ).exists()
+
+            if request.user.is_authenticated:
+                already_played = NarrationLog.objects.filter(
+                    user=request.user,
+                    poi=poi,
+                    trigger_type=NarrationLog.TriggerType.AUTO,
+                    start_time__gte=cutoff,
+                    status=NarrationLog.Status.ACTIVE,
+                ).exists()
+            else:
+                # Anonymous: giới hạn theo các log không có user cho cùng POI
+                already_played = NarrationLog.objects.filter(
+                    user__isnull=True,
+                    poi=poi,
+                    trigger_type=NarrationLog.TriggerType.AUTO,
+                    start_time__gte=cutoff,
+                    status=NarrationLog.Status.ACTIVE,
+                ).exists()
 
             if already_played:
                 return Response(
                     {
                         'should_play': False,
                         'reason': (
-                            f'Người dùng đã nghe nội dung này trong vòng '
+                            f'Nội dung này đã được phát trong vòng '
                             f'{ANTI_SPAM_MINUTES} phút qua.'
                         ),
                     },

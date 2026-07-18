@@ -10,5 +10,5 @@ class CoreAPICriticalTests(APITestCase):
     def test_api_root_has_app_metadata(self):
         r = self.client.get('/api/')
         self.assertEqual(r.status_code, 200)
-        self.assertEqual(r.data['app'], 'BuocChanSoiDa')
+        self.assertEqual(r.data['app'], 'NeonFoodmap')
         self.assertIn('endpoints', r.data)

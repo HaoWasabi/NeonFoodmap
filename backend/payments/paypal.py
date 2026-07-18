@@ -1,18 +1,13 @@
-import os
 from typing import Any, Dict
-
+from django.conf import settings
 import requests
-from dotenv import load_dotenv
 
-load_dotenv()
-
-
-PAYPAL_CLIENT_ID = os.getenv('PAYPAL_CLIENT_ID', '')
-PAYPAL_SECRET = os.getenv('PAYPAL_SECRET', '')
-PAYPAL_BASE = os.getenv('PAYPAL_BASE', 'https://api-m.sandbox.paypal.com')
+PAYPAL_CLIENT_ID = settings.PAYPAL_CLIENT_ID
+PAYPAL_SECRET = settings.PAYPAL_SECRET
+PAYPAL_BASE = settings.PAYPAL_BASE
 
 # Simple fallback rate: 1 USD = 25,000 VND (you can override via env)
-VND_TO_USD_RATE = float(os.getenv('PAYPAL_VND_TO_USD_RATE', '25000'))
+VND_TO_USD_RATE = settings.VND_TO_USD_RATE
 
 
 def get_access_token() -> str:

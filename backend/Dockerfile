@@ -63,10 +63,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 EXPOSE 8000
 
-# Collect static files khi build xong, rồi khởi động Gunicorn
+# Collect static files và khởi động Gunicorn.
+# LƯU Ý: migrate KHÔNG chạy ở đây — chạy riêng bằng ECS task/init container
+# trước khi deploy để tránh concurrent migrations khi có nhiều replicas.
+# Ví dụ: docker run --rm <image> python manage.py migrate --noinput
 CMD ["sh", "-c", \
-    "python manage.py migrate --noinput && \
-     python manage.py collectstatic --noinput && \
+    "python manage.py collectstatic --noinput && \
      gunicorn config.wsgi:application \
        --bind 0.0.0.0:8000 \
        --workers 3 \

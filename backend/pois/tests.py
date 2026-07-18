@@ -5,6 +5,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from payments.models import Invoice, PartnerPremiumPurchase
 from pois.models import POI, Partner
 from pois.qr_map import sign_poi_map_qr, verify_poi_map_qr
 
@@ -42,6 +43,14 @@ class MapQrApiTests(APITestCase):
             business_name='Cafe',
             status=Partner.Status.ACTIVE,
         )
+        # Grant premium access so IsPartnerPremium passes
+        invoice = Invoice.objects.create(
+            user=self.user,
+            amount=1000,
+            reason='premium',
+            status=Invoice.Status.SUCCESS,
+        )
+        PartnerPremiumPurchase.objects.create(user=self.user, invoice=invoice)
 
     def test_partner_gets_qr_map_url(self):
         self.client.force_authenticate(user=self.user)
