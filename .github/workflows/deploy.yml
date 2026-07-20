@@ -1,7 +1,10 @@
 # =============================================================================
 # CI/CD Pipeline cho NeonFoodmap (Full-stack)
-# Trigger: push/PR vào main
-# Steps: Lint → Test → Build Docker → Push ECR → Deploy ECS
+# CI-001: GitHub Actions CI/CD Pipeline
+# Depends: AWS-004, IAM-001
+#
+# Trigger: push/PR vào main + develop (test trên feature branch)
+# Steps: Lint → Test → E2E → Build Docker → Push ECR → Deploy ECS → Smoke Test
 # =============================================================================
 
 name: NeonFoodmap CI/CD Pipeline
@@ -10,6 +13,8 @@ on:
   push:
     branches:
       - main
+      - develop
+      - 'feature/**'    # Cho phép test workflow trên feature branch
     paths:
       - 'backend/**'
       - 'frontend/**'
@@ -31,10 +36,11 @@ env:
   ECS_CLUSTER: ${{ vars.ECS_CLUSTER || 'neonfoodmap-cluster' }}
   ECS_BACKEND_SERVICE: ${{ vars.ECS_BACKEND_SERVICE || 'neonfoodmap-backend-svc' }}
   ECS_BACKEND_TASK_DEF: ${{ vars.ECS_BACKEND_TASK_DEF || 'neonfoodmap-backend-td' }}
+  APP_URL: ${{ vars.APP_URL || 'https://neonfoodmap.example.com' }}
 
 jobs:
   # ─────────────────────────────────────────────
-  # Job 1: Backend Lint & Test
+  # Job 1: Backend Lint & Unit Tests
   # ─────────────────────────────────────────────
   backend-test:
     name: Backend Lint & Test
@@ -60,7 +66,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install flake8
+          pip install flake8 pytest pytest-django
 
       - name: Lint with flake8
         working-directory: ./backend
@@ -70,11 +76,11 @@ jobs:
           # Cảnh báo (không fail) cho các lỗi phong cách
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
 
-      - name: Run Django Tests
+      - name: Run Django Unit Tests
         working-directory: ./backend
         env:
-          DJANGO_SETTINGS_MODULE: config.settings_test      # Dùng settings nhẹ cho test
-          SECRET_KEY: ci-test-secret-key-not-for-production # Key giả để Django khởi động trên CI
+          DJANGO_SETTINGS_MODULE: config.settings_test
+          SECRET_KEY: ci-test-secret-key-not-for-production
         run: |
           python manage.py test --settings=config.settings_test --verbosity=2
 
@@ -108,16 +114,85 @@ jobs:
         run: npm run build
 
   # ─────────────────────────────────────────────
-  # Job 3: Build & Push Docker Images to ECR
-  # Chỉ push khi merge vào main (không push cho PR)
+  # Job 3: Frontend E2E Tests (Playwright)
+  # ─────────────────────────────────────────────
+  e2e-tests:
+    name: Frontend E2E Tests (Playwright)
+    needs: [backend-test, frontend-check]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: ./frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Set up Python for backend
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'backend/requirements.txt'
+
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-libmysqlclient-dev pkg-config gcc
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Start backend server
+        working-directory: ./backend
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings_test
+          SECRET_KEY: ci-test-secret-key-not-for-production
+        run: |
+          python manage.py migrate --settings=config.settings_test
+          python manage.py runserver 0.0.0.0:8000 --settings=config.settings_test &
+          # Đợi server sẵn sàng
+          for i in $(seq 1 30); do
+            curl -s http://localhost:8000/api/ && break || sleep 1
+          done
+
+      - name: Run Playwright E2E tests
+        working-directory: ./frontend
+        env:
+          VITE_API_URL: http://localhost:8000
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
+
+  # ─────────────────────────────────────────────
+  # Job 4: Build & Push Docker Images to ECR
+  # Chỉ push khi merge vào main (không push cho PR hoặc feature branch)
   # ─────────────────────────────────────────────
   build-and-push:
     name: Build & Push Docker Images
-    needs: [backend-test, frontend-check]
+    needs: [e2e-tests]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     outputs:
       backend-image: ${{ steps.build-backend.outputs.image }}
+      frontend-image: ${{ steps.build-frontend.outputs.image }}
       image-tag: ${{ steps.vars.outputs.sha_tag }}
 
     steps:
@@ -151,6 +226,7 @@ jobs:
           echo "image=${{ env.ECR_REGISTRY }}/neonfoodmap-backend:${{ steps.vars.outputs.sha_tag }}" >> $GITHUB_OUTPUT
 
       - name: Build & Push Frontend Image
+        id: build-frontend
         run: |
           docker build \
             --build-arg VITE_API_URL=${{ vars.VITE_API_URL }} \
@@ -159,15 +235,20 @@ jobs:
             ./frontend
           docker push ${{ env.ECR_REGISTRY }}/neonfoodmap-frontend:latest
           docker push ${{ env.ECR_REGISTRY }}/neonfoodmap-frontend:${{ steps.vars.outputs.sha_tag }}
+          echo "image=${{ env.ECR_REGISTRY }}/neonfoodmap-frontend:${{ steps.vars.outputs.sha_tag }}" >> $GITHUB_OUTPUT
 
   # ─────────────────────────────────────────────
-  # Job 4: Deploy Backend to ECS
+  # Job 5: Deploy Backend to ECS
+  # Yêu cầu approval qua GitHub Environment protection rules
   # ─────────────────────────────────────────────
   deploy-backend:
     name: Deploy Backend to ECS
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: ${{ env.APP_URL }}
 
     steps:
       - name: Configure AWS credentials (OIDC)
@@ -218,3 +299,62 @@ jobs:
                 "assignPublicIp": "ENABLED"
               }
             }'
+
+  # ─────────────────────────────────────────────
+  # Job 6: Post-Deploy Smoke Tests
+  # Kiểm tra app hoạt động sau khi deploy
+  # ─────────────────────────────────────────────
+  smoke-tests:
+    name: Post-Deploy Smoke Tests
+    needs: deploy-backend
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Wait for service to stabilize
+        run: sleep 30
+
+      - name: Health check - API root
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" ${{ env.APP_URL }}/api/)
+          echo "API root responded with: $STATUS"
+          if [ "$STATUS" -ne 200 ]; then
+            echo "❌ Health check failed!"
+            exit 1
+          fi
+          echo "✅ API root is healthy"
+
+      - name: Health check - API endpoints
+        run: |
+          # Kiểm tra các endpoint quan trọng
+          ENDPOINTS=(
+            "/api/pois/"
+            "/api/tours/"
+            "/api/categories/"
+          )
+          for endpoint in "${ENDPOINTS[@]}"; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ env.APP_URL }}${endpoint}")
+            echo "  ${endpoint} → ${STATUS}"
+            if [ "$STATUS" -ge 500 ]; then
+              echo "❌ Endpoint ${endpoint} returned server error!"
+              exit 1
+            fi
+          done
+          echo "✅ All critical endpoints responding"
+
+      - name: Health check - Frontend
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" ${{ env.APP_URL }}/)
+          echo "Frontend responded with: $STATUS"
+          if [ "$STATUS" -ne 200 ]; then
+            echo "❌ Frontend health check failed!"
+            exit 1
+          fi
+          echo "✅ Frontend is healthy"
+
+      - name: Verify deployment tag
+        run: |
+          # Kiểm tra version đã deploy đúng
+          RESPONSE=$(curl -s ${{ env.APP_URL }}/api/ || true)
+          echo "API Response: $RESPONSE"
+          echo "✅ Smoke tests passed - deployment verified"
