@@ -1,12 +1,25 @@
+# =============================================================================
+# CI/CD Pipeline cho NeonFoodmap (Full-stack)
+# Trigger: push/PR vào main
+# Steps: Lint → Test → Build Docker → Push ECR → Deploy ECS
+# =============================================================================
+
 name: NeonFoodmap CI/CD Pipeline
 
 on:
   push:
     branches:
       - main
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/deploy.yml'
   pull_request:
     branches:
       - main
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
 
 permissions:
   id-token: write
@@ -15,10 +28,16 @@ permissions:
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'ap-southeast-1' }}
   ECR_REGISTRY: ${{ vars.ECR_REGISTRY || '497172038341.dkr.ecr.ap-southeast-1.amazonaws.com' }}
+  ECS_CLUSTER: ${{ vars.ECS_CLUSTER || 'neonfoodmap-cluster' }}
+  ECS_BACKEND_SERVICE: ${{ vars.ECS_BACKEND_SERVICE || 'neonfoodmap-backend-svc' }}
+  ECS_BACKEND_TASK_DEF: ${{ vars.ECS_BACKEND_TASK_DEF || 'neonfoodmap-backend-td' }}
 
 jobs:
+  # ─────────────────────────────────────────────
+  # Job 1: Backend Lint & Test
+  # ─────────────────────────────────────────────
   backend-test:
-    name: Backend Lint and Unit Tests
+    name: Backend Lint & Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -41,14 +60,29 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install flake8
+
+      - name: Lint with flake8
+        working-directory: ./backend
+        run: |
+          # Dừng build nếu có lỗi syntax hoặc undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Cảnh báo (không fail) cho các lỗi phong cách
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
 
       - name: Run Django Tests
         working-directory: ./backend
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings_test      # Dùng settings nhẹ cho test
+          SECRET_KEY: ci-test-secret-key-not-for-production # Key giả để Django khởi động trên CI
         run: |
-          python manage.py test --settings=config.settings_test
+          python manage.py test --settings=config.settings_test --verbosity=2
 
+  # ─────────────────────────────────────────────
+  # Job 2: Frontend Lint & Build Check
+  # ─────────────────────────────────────────────
   frontend-check:
-    name: Frontend Lint and Compilation Check
+    name: Frontend Lint & Build Check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -73,10 +107,19 @@ jobs:
         working-directory: ./frontend
         run: npm run build
 
+  # ─────────────────────────────────────────────
+  # Job 3: Build & Push Docker Images to ECR
+  # Chỉ push khi merge vào main (không push cho PR)
+  # ─────────────────────────────────────────────
   build-and-push:
-    name: Build Docker Images and Push to ECR
+    name: Build & Push Docker Images
     needs: [backend-test, frontend-check]
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    outputs:
+      backend-image: ${{ steps.build-backend.outputs.image }}
+      image-tag: ${{ steps.vars.outputs.sha_tag }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -96,22 +139,82 @@ jobs:
         run: |
           echo "sha_tag=sha-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-      - name: Build Backend Docker Image
+      - name: Build & Push Backend Image
+        id: build-backend
         run: |
-          docker build -t ${{ env.ECR_REGISTRY }}/neonfoodmap-backend:latest -t ${{ env.ECR_REGISTRY }}/neonfoodmap-backend:${{ steps.vars.outputs.sha_tag }} ./backend
-
-      - name: Build Frontend Docker Image
-        run: |
-          docker build --build-arg VITE_API_URL=${{ vars.VITE_API_URL }} -t ${{ env.ECR_REGISTRY }}/neonfoodmap-frontend:latest -t ${{ env.ECR_REGISTRY }}/neonfoodmap-frontend:${{ steps.vars.outputs.sha_tag }} ./frontend
-
-      - name: Push Backend Image to ECR
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
+          docker build \
+            -t ${{ env.ECR_REGISTRY }}/neonfoodmap-backend:latest \
+            -t ${{ env.ECR_REGISTRY }}/neonfoodmap-backend:${{ steps.vars.outputs.sha_tag }} \
+            ./backend
           docker push ${{ env.ECR_REGISTRY }}/neonfoodmap-backend:latest
           docker push ${{ env.ECR_REGISTRY }}/neonfoodmap-backend:${{ steps.vars.outputs.sha_tag }}
+          echo "image=${{ env.ECR_REGISTRY }}/neonfoodmap-backend:${{ steps.vars.outputs.sha_tag }}" >> $GITHUB_OUTPUT
 
-      - name: Push Frontend Image to ECR
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      - name: Build & Push Frontend Image
         run: |
+          docker build \
+            --build-arg VITE_API_URL=${{ vars.VITE_API_URL }} \
+            -t ${{ env.ECR_REGISTRY }}/neonfoodmap-frontend:latest \
+            -t ${{ env.ECR_REGISTRY }}/neonfoodmap-frontend:${{ steps.vars.outputs.sha_tag }} \
+            ./frontend
           docker push ${{ env.ECR_REGISTRY }}/neonfoodmap-frontend:latest
           docker push ${{ env.ECR_REGISTRY }}/neonfoodmap-frontend:${{ steps.vars.outputs.sha_tag }}
+
+  # ─────────────────────────────────────────────
+  # Job 4: Deploy Backend to ECS
+  # ─────────────────────────────────────────────
+  deploy-backend:
+    name: Deploy Backend to ECS
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download current task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition ${{ env.ECS_BACKEND_TASK_DEF }} \
+            --query 'taskDefinition' \
+            --output json > task-def.json
+
+      - name: Update task definition with new image
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-def.json
+          container-name: backend
+          image: ${{ needs.build-and-push.outputs.backend-image }}
+
+      - name: Deploy to Amazon ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_BACKEND_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+      - name: Run database migrations
+        run: |
+          aws ecs run-task \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --task-definition ${{ env.ECS_BACKEND_TASK_DEF }} \
+            --overrides '{
+              "containerOverrides": [{
+                "name": "backend",
+                "command": ["python", "manage.py", "migrate", "--noinput"]
+              }]
+            }' \
+            --launch-type FARGATE \
+            --network-configuration '{
+              "awsvpcConfiguration": {
+                "subnets": ${{ secrets.ECS_SUBNETS }},
+                "securityGroups": ${{ secrets.ECS_SECURITY_GROUPS }},
+                "assignPublicIp": "ENABLED"
+              }
+            }'
