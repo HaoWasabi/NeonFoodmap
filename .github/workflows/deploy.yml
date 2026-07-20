@@ -1,0 +1,117 @@
+name: NeonFoodmap CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'ap-southeast-1' }}
+  ECR_REGISTRY: ${{ vars.ECR_REGISTRY || '497172038341.dkr.ecr.ap-southeast-1.amazonaws.com' }}
+
+jobs:
+  backend-test:
+    name: Backend Lint and Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'backend/requirements.txt'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-libmysqlclient-dev pkg-config gcc
+
+      - name: Install python dependencies
+        working-directory: ./backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Django Tests
+        working-directory: ./backend
+        run: |
+          python manage.py test --settings=config.settings_test
+
+  frontend-check:
+    name: Frontend Lint and Compilation Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: ./frontend
+        run: npm run lint
+
+      - name: Build static bundle
+        working-directory: ./frontend
+        run: npm run build
+
+  build-and-push:
+    name: Build Docker Images and Push to ECR
+    needs: [backend-test, frontend-check]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Get short git SHA
+        id: vars
+        run: |
+          echo "sha_tag=sha-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Build Backend Docker Image
+        run: |
+          docker build -t ${{ env.ECR_REGISTRY }}/neonfoodmap-backend:latest -t ${{ env.ECR_REGISTRY }}/neonfoodmap-backend:${{ steps.vars.outputs.sha_tag }} ./backend
+
+      - name: Build Frontend Docker Image
+        run: |
+          docker build --build-arg VITE_API_URL=${{ vars.VITE_API_URL }} -t ${{ env.ECR_REGISTRY }}/neonfoodmap-frontend:latest -t ${{ env.ECR_REGISTRY }}/neonfoodmap-frontend:${{ steps.vars.outputs.sha_tag }} ./frontend
+
+      - name: Push Backend Image to ECR
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          docker push ${{ env.ECR_REGISTRY }}/neonfoodmap-backend:latest
+          docker push ${{ env.ECR_REGISTRY }}/neonfoodmap-backend:${{ steps.vars.outputs.sha_tag }}
+
+      - name: Push Frontend Image to ECR
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          docker push ${{ env.ECR_REGISTRY }}/neonfoodmap-frontend:latest
+          docker push ${{ env.ECR_REGISTRY }}/neonfoodmap-frontend:${{ steps.vars.outputs.sha_tag }}
