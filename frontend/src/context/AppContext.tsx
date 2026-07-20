@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import type { User, POI, NarrationState, Partner, Media } from '../types';
 import { getUserAuthSession } from '../services/api';

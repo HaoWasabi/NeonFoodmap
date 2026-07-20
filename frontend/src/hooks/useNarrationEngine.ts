@@ -106,10 +106,12 @@ export function useNarrationEngine({
             localStorage.setItem(`bcsd_last_heard_${poi.id}`, Date.now().toString());
 
             // 5. Fetch Media & Partners
-            let [media, partners] = await Promise.all([
+            const [fetchedMedia, partners] = await Promise.all([
                 getPOIMedia(poi.id, language, voiceRegion),
                 getPOIPartners(poi.id).catch(() => [] as Partner[]),
             ]);
+
+            let media = fetchedMedia;
 
             // Offline handle: Nếu không fetch được media từ API nhưng trong POI object đã có sẵn media array (từ offline package)
             if (!media && Array.isArray(poi.media)) {

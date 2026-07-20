@@ -11,7 +11,9 @@ export function useOfflineMedia(url?: string) {
 
     useEffect(() => {
         if (!url) {
-            setLocalUrl(undefined);
+            // Reset is necessary when url changes from a value to undefined.
+            // This is a conditional early-return synchronization, not a cascading render.
+            setLocalUrl(undefined); // eslint-disable-line react-hooks/set-state-in-effect
             return;
         }
 

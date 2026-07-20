@@ -13,7 +13,7 @@ export default function PageTransition({ children }: PageTransitionProps) {
 
     useEffect(() => {
         if (location.key !== displayKey) {
-            setIsVisible(false);
+            setIsVisible(false); // eslint-disable-line react-hooks/set-state-in-effect -- intentional transition animation
             const timeout = setTimeout(() => {
                 setDisplayKey(location.key);
                 setIsVisible(true);

@@ -3,13 +3,22 @@ import { useState, useEffect } from 'react';
 import { useDeviceId } from './useDeviceId';
 import type { DeviceInfo } from '../types';
 
+// Extended navigator interface for non-standard properties
+interface NavigatorExtended extends Navigator {
+    connection?: { type?: string; effectiveType?: string };
+    mozConnection?: { type?: string; effectiveType?: string };
+    webkitConnection?: { type?: string; effectiveType?: string };
+    deviceMemory?: number;
+}
+
 export function useDeviceInfo(): DeviceInfo {
     const deviceId = useDeviceId();
+    const nav = navigator as NavigatorExtended;
     const [deviceInfo, setDeviceInfo] = useState<DeviceInfo>(() => ({
         deviceId,
         userAgent: navigator.userAgent,
         platform: navigator.platform,
-        vendor: (navigator as any).vendor || undefined,
+        vendor: nav.vendor || undefined,
         language: navigator.language,
         languages: Array.from(navigator.languages),
         cookieEnabled: navigator.cookieEnabled,
@@ -26,15 +35,16 @@ export function useDeviceInfo(): DeviceInfo {
 
     useEffect(() => {
         const updateDeviceInfo = () => {
-            const connection = (navigator as any).connection || 
-                             (navigator as any).mozConnection || 
-                             (navigator as any).webkitConnection;
+            const navExt = navigator as NavigatorExtended;
+            const connection = navExt.connection || 
+                             navExt.mozConnection || 
+                             navExt.webkitConnection;
             
             const info: DeviceInfo = {
                 deviceId,
                 userAgent: navigator.userAgent,
                 platform: navigator.platform,
-                vendor: (navigator as any).vendor || undefined,
+                vendor: navExt.vendor || undefined,
                 language: navigator.language,
                 languages: Array.from(navigator.languages),
                 cookieEnabled: navigator.cookieEnabled,
@@ -45,7 +55,7 @@ export function useDeviceInfo(): DeviceInfo {
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                 connectionType: connection?.type,
                 effectiveType: connection?.effectiveType,
-                memory: (navigator as any).deviceMemory,
+                memory: navExt.deviceMemory,
                 hardwareConcurrency: navigator.hardwareConcurrency,
             };
             

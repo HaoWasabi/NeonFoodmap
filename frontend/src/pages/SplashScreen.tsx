@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { initUser, getUserAuthSession } from '../services/api';
 import { useDeviceId } from '../hooks/useDeviceId';
 import { useApp } from '../context/AppContext';
+import type { Language, VoiceRegion } from '../types';
 
 export default function SplashScreen() {
     const navigate = useNavigate();
@@ -52,8 +53,8 @@ export default function SplashScreen() {
                     
                     const mergedUser = {
                         ...user,
-                        preferred_language: (savedLang as any) || user.preferred_language || 'vi',
-                        preferred_voice_region: (savedRegion as any) || user.preferred_voice_region || 'mien_nam',
+                        preferred_language: (savedLang as Language) || user.preferred_language || 'vi',
+                        preferred_voice_region: (savedRegion as VoiceRegion) || user.preferred_voice_region || 'mien_nam',
                     };
                     
                     dispatch({ type: 'SET_USER', payload: mergedUser });
@@ -68,9 +69,9 @@ export default function SplashScreen() {
                             payload: {
                                 ...session.user,
                                 device_id: session.user.device_id || deviceId,
-                                preferred_language: (savedLang as any) || session.user.preferred_language || 'vi',
+                                preferred_language: (savedLang as Language) || session.user.preferred_language || 'vi',
                                 preferred_voice_region:
-                                    (savedRegion as any) || session.user.preferred_voice_region || 'mien_nam',
+                                    (savedRegion as VoiceRegion) || session.user.preferred_voice_region || 'mien_nam',
                             },
                         });
                     } else {
@@ -79,8 +80,8 @@ export default function SplashScreen() {
                             payload: {
                                 id: deviceId,
                                 device_id: deviceId,
-                                preferred_language: (savedLang as any) || 'vi',
-                                preferred_voice_region: (savedRegion as any) || 'mien_nam',
+                                preferred_language: (savedLang as Language) || 'vi',
+                                preferred_voice_region: (savedRegion as VoiceRegion) || 'mien_nam',
                             },
                         });
                     }

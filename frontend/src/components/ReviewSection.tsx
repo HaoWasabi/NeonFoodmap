@@ -37,7 +37,7 @@ export default function ReviewSection({ tourId }: ReviewSectionProps) {
             tour: Number(tourId),
             rating,
             comment,
-        } as any);
+        });
         setRefreshKey(prev => prev + 1);
         // setShowForm(false); handled inside ReviewForm's onClose call which is called in handleSubmit with delay
     };

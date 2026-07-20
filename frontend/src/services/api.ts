@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { InternalAxiosRequestConfig } from 'axios';
 import type {
     User,
     POI,
@@ -190,7 +191,7 @@ apiClient.interceptors.response.use(
             return Promise.reject(error);
         }
 
-        const originalRequest = error.config as (any & { _retry?: boolean }) | undefined;
+        const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
         if (!originalRequest || originalRequest._retry) {
             return Promise.reject(error);
         }
@@ -224,7 +225,7 @@ apiClient.interceptors.response.use(
             try {
                 if (!partnerRefreshPromise) {
                     partnerRefreshPromise = (async () => {
-                        const refreshResp = await axios.post(
+                        const refreshResp = await axios.post<{ access?: string }>(
                             `${API_BASE_URL}/partners/account/login/refresh/`,
                             { refresh: session.refresh },
                             { 
@@ -235,7 +236,7 @@ apiClient.interceptors.response.use(
                                 timeout: 10000 
                             }
                         );
-                        const newAccess = (refreshResp.data as any)?.access;
+                        const newAccess = refreshResp.data?.access;
                         if (!newAccess) throw new Error('Refresh failed');
                         
                         const nextSession: PartnerAuthSession = { ...session, access: newAccess };
@@ -263,7 +264,7 @@ apiClient.interceptors.response.use(
             try {
                 if (!userRefreshPromise) {
                     userRefreshPromise = (async () => {
-                        const refreshResp = await axios.post(
+                        const refreshResp = await axios.post<{ access?: string }>(
                             `${API_BASE_URL}/users/login/refresh/`,
                             { refresh: session.refresh },
                             { 
@@ -274,7 +275,7 @@ apiClient.interceptors.response.use(
                                 timeout: 30000
                             }
                         );
-                        const newAccess = (refreshResp.data as any)?.access;
+                        const newAccess = refreshResp.data?.access;
                         if (!newAccess) throw new Error('Refresh failed');
                         
                         const nextSession: UserAuthSession = { ...session, access: newAccess };
@@ -689,7 +690,7 @@ export const getTourReviews = async (tourId: string): Promise<TourReview[]> => {
     return data;
 };
 
-export const submitTourReview = async (review: Omit<TourReview, 'id' | 'created_at' | 'user_email' | 'username'>): Promise<TourReview> => {
+export const submitTourReview = async (review: Omit<TourReview, 'id' | 'created_at' | 'user_email' | 'username' | 'user'>): Promise<TourReview> => {
     const { data } = await apiClient.post<TourReview>(`/tours/reviews/`, review);
     return data;
 };

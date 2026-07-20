@@ -329,7 +329,7 @@ export default function Settings() {
             <div className="mx-4 mt-6 mb-4 animate-stagger-item" style={staggerStyle(6)}>
                 <button
                     onClick={handleSave}
-                    className={`w-full py-4 rounded-2xl font-bold text-base tap-scale transition-all shadow-lg ${saved ? 'bg-green-500 text-white shadow-green-200 animate-bounce-in' : 'bg-primary text-white shadow-primary\/20 hover:shadow-xl'
+                    className={`w-full py-4 rounded-2xl font-bold text-base tap-scale transition-all shadow-lg ${saved ? 'bg-green-500 text-white shadow-green-200 animate-bounce-in' : 'bg-primary text-white shadow-primary/20 hover:shadow-xl'
                         }`}
                 >
                     {saved ? t('common.saved') : t('common.save')}

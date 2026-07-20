@@ -23,8 +23,14 @@ export interface GeoPosition {
 
 export function useGeolocation() {
     const [position, setPosition] = useState<GeoPosition | null>(null);
-    const [error, setError] = useState<string | null>(null);
-    const [permissionStatus, setPermissionStatus] = useState<'pending' | 'granted' | 'denied'>('pending');
+    const [error, setError] = useState<string | null>(() => {
+        if (!navigator.geolocation) return 'Thiết bị không hỗ trợ GPS';
+        return null;
+    });
+    const [permissionStatus, setPermissionStatus] = useState<'pending' | 'granted' | 'denied'>(() => {
+        if (!navigator.geolocation) return 'denied';
+        return 'pending';
+    });
     const [isMocking, setIsMocking] = useState(false);
     const breadcrumbBuffer = useRef<BreadcrumbPoint[]>([]);
     const lastPositionRef = useRef<GeoPosition | null>(null);
@@ -61,8 +67,6 @@ export function useGeolocation() {
 
     useEffect(() => {
         if (!navigator.geolocation) {
-            setError('Thiết bị không hỗ trợ GPS');
-            setPermissionStatus('denied');
             return;
         }
 

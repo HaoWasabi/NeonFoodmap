@@ -45,8 +45,9 @@ export default function InvoiceDetail() {
                 if (!alive) return;
                 setError(getApiErrorMessage(e));
             } finally {
-                if (!alive) return;
-                setLoading(false);
+                if (alive) {
+                    setLoading(false);
+                }
             }
         }
 
@@ -54,7 +55,7 @@ export default function InvoiceDetail() {
         return () => {
             alive = false;
         };
-    }, [invoiceId, navigate]);
+    }, [invoiceId, navigate, setParams]);
 
     const statusBadge = (status?: string) => {
         if (status === 'SUCCESS') return 'bg-green-50 text-green-700 border-green-200';

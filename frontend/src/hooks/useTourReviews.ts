@@ -35,7 +35,7 @@ export function useTourReviews(tourId: string) {
         loadReviews();
     }, [loadReviews]);
 
-    const addReview = async (reviewData: Omit<TourReview, 'id' | 'created_at'>) => {
+    const addReview = async (reviewData: Omit<TourReview, 'id' | 'created_at' | 'user_email' | 'username' | 'user'>) => {
         try {
             // Cố gắng gửi lên API
             const newReview = await submitTourReview(reviewData);
@@ -49,6 +49,9 @@ export function useTourReviews(tourId: string) {
                 ...reviewData,
                 id: `local-${Date.now()}`,
                 created_at: new Date().toISOString(),
+                user: '',
+                user_email: '',
+                username: '',
             };
             const updated = [fallbackReview, ...reviews];
             setReviews(updated);

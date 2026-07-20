@@ -130,7 +130,6 @@ export default function GuidedTour() {
     const [tourStarted, setTourStarted] = useState(false);
     const [loading, setLoading] = useState(true);
     const [showMap, setShowMap] = useState(false);
-    const [offRoute, setOffRoute] = useState(false);
     const [showReviewForm, setShowReviewForm] = useState(false);
     const [showPremiumCheckout, setShowPremiumCheckout] = useState(false);
     const [narrationData, setNarrationData] = useState<{ poi: POI; media: Media | null; partners: Partner[] } | null>(null);
@@ -214,7 +213,9 @@ export default function GuidedTour() {
     });
 
     // Cập nhật ref mỗi lần triggerNarration thay đổi
-    triggerNarrationRef.current = triggerNarration;
+    useEffect(() => {
+        triggerNarrationRef.current = triggerNarration;
+    }, [triggerNarration]);
 
     // ── Queue Auto-Play ──
     // Khi narrationData đóng (null) VÀ queue còn POI → tự động phát tiếp
@@ -256,14 +257,13 @@ export default function GuidedTour() {
         },
     });
 
-    // Off-route detection
-    useEffect(() => {
+    // Off-route detection (derived state)
+    const offRoute = useMemo(() => {
         if (!tourStarted || !position || routePoints.length < 2) {
-            setOffRoute(false);
-            return;
+            return false;
         }
         const dist = getMinDistanceToRoute(position.lat, position.lng, routePoints);
-        setOffRoute(dist > OFF_ROUTE_THRESHOLD_M);
+        return dist > OFF_ROUTE_THRESHOLD_M;
     }, [tourStarted, position, routePoints]);
 
     // Khoảng cách thực tế đến điểm tiếp theo
@@ -717,7 +717,7 @@ export default function GuidedTour() {
                         onClick={() => { setTourStarted(!tourStarted); if (!tourStarted) setShowMap(true); }}
                         className={`w-full flex items-center justify-center gap-2.5 rounded-2xl h-14 text-white text-base font-bold shadow-xl tap-scale transition-all ${tourStarted
                             ? 'bg-slate-800 shadow-slate-800/20'
-                            : 'bg-primary shadow-primary\/30 animate-pulse-glow'
+                            : 'bg-primary shadow-primary/30 animate-pulse-glow'
                             }`}
                     >
                         <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -768,7 +768,7 @@ export default function GuidedTour() {
                             tour: Number(selectedTour.id),
                             rating,
                             comment,
-                        } as any);
+                        });
                         // Xóa cờ đã review để hiện popup cảm ơn (tùy chọn UI sau này)
                     }}
                 />
