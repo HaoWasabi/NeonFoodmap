@@ -18,7 +18,8 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dev-key-change-in-producti
 
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS_STR = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+# 'localhost,127.0.0.1'
+ALLOWED_HOSTS_STR = os.getenv('ALLOWED_HOSTS', '*',)
 ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS_STR.split(',') if h.strip()]
 if DEBUG:
     ALLOWED_HOSTS += ['.ngrok-free.app', '.ngrok-free.dev']
