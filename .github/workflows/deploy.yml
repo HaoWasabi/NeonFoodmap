@@ -33,7 +33,7 @@ permissions:
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'ap-southeast-1' }}
   ECR_REGISTRY: ${{ vars.ECR_REGISTRY || '497172038341.dkr.ecr.ap-southeast-1.amazonaws.com' }}
-  ECS_CLUSTER: ${{ vars.ECS_CLUSTER || 'neonfoodmap-cluster' }}
+  ECS_CLUSTER: ${{ vars.ECS_CLUSTER || 'NeonFoodmap-cluster' }}
   ECS_BACKEND_SERVICE: ${{ vars.ECS_BACKEND_SERVICE || 'svc-neonfoodmap-be' }}
   ECS_BACKEND_TASK_DEF: ${{ vars.ECS_BACKEND_TASK_DEF || 'neonfoodmap-task-be' }}
   APP_URL: ${{ vars.APP_URL || 'https://neonfoodmap.example.com' }}
