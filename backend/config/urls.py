@@ -5,7 +5,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.http import HttpResponse
+from core.views import health_check
 
 # ── Custom Admin Branding & Dashboard Stats ─────────────────────────────────
 # Patch admin.site.index để inject realtime stats vào trang chủ admin.
