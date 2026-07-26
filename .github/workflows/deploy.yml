@@ -36,7 +36,7 @@ env:
   ECS_CLUSTER: ${{ vars.ECS_CLUSTER || 'NeonFoodmap-cluster' }}
   ECS_BACKEND_SERVICE: ${{ vars.ECS_BACKEND_SERVICE || 'svc-neonfoodmap-be' }}
   ECS_BACKEND_TASK_DEF: ${{ vars.ECS_BACKEND_TASK_DEF || 'neonfoodmap-task-be' }}
-  APP_URL: ${{ vars.APP_URL || 'https://neonfoodmap.example.com' }}
+  APP_URL: ${{ vars.APP_URL || 'ALB-NeonFoodMap-406336237.ap-southeast-1.elb.amazonaws.com' }}
 
 jobs:
   # ─────────────────────────────────────────────
