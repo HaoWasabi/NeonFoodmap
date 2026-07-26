@@ -36,7 +36,10 @@ env:
   ECS_CLUSTER: ${{ vars.ECS_CLUSTER || 'NeonFoodmap-cluster' }}
   ECS_BACKEND_SERVICE: ${{ vars.ECS_BACKEND_SERVICE || 'svc-neonfoodmap-be' }}
   ECS_BACKEND_TASK_DEF: ${{ vars.ECS_BACKEND_TASK_DEF || 'neonfoodmap-task-be' }}
-  APP_URL: ${{ vars.APP_URL || 'ALB-NeonFoodMap-406336237.ap-southeast-1.elb.amazonaws.com' }}
+  ECS_FRONTEND_SERVICE: ${{ vars.ECS_FRONTEND_SERVICE || 'svc-neonfoodmap-fe' }}
+  ECS_FRONTEND_TASK_DEF: ${{ vars.ECS_FRONTEND_TASK_DEF || 'neonfoodmap-task-fe' }}
+  VITE_API_URL: ${{ vars.VITE_API_URL || 'http://ALB-NeonFoodMap-406336237.ap-southeast-1.elb.amazonaws.com/api/' }}
+  APP_URL: ${{ vars.APP_URL || 'http://ALB-NeonFoodMap-406336237.ap-southeast-1.elb.amazonaws.com' }}
 
 jobs:
   # ─────────────────────────────────────────────

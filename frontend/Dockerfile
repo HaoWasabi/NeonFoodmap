@@ -13,11 +13,14 @@ RUN npm ci --ignore-scripts
 
 # VITE_* env vars được bake vào lúc build (không phải lúc runtime)
 # Truyền qua --build-arg khi chạy: docker build --build-arg VITE_API_URL=...
-ARG VITE_API_URL=http://localhost:8000/api
+ARG VITE_API_URL=http://ALB-NeonFoodMap-406336237.ap-southeast-1.elb.amazonaws.com/api/
 ARG VITE_PAYPAL_CLIENT_ID=
 
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_PAYPAL_CLIENT_ID=$VITE_PAYPAL_CLIENT_ID
+
+COPY package*.json ./
+RUN npm ci
 
 # Copy source code và build
 COPY . .
