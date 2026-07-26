@@ -283,6 +283,25 @@ jobs:
                 "assignPublicIp": "ENABLED"
               }
             }'
+      - name: Verify DB Connection (connection.ensure_connection)
+        run: |
+          aws ecs run-task \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --task-definition ${{ env.ECS_BACKEND_TASK_DEF }} \
+            --overrides '{
+              "containerOverrides": [{
+                "name": "backend",
+                "command": ["python", "manage.py", "shell", "-c", "from django.db import connection; connection.ensure_connection(); print(\"SUCCESS_DB_CONNECTED: connection.ensure_connection() executed without exception\")"]
+              }]
+            }' \
+            --launch-type FARGATE \
+            --network-configuration '{
+              "awsvpcConfiguration": {
+                "subnets": ${{ secrets.ECS_SUBNETS }},
+                "securityGroups": ${{ secrets.ECS_SECURITY_GROUPS }},
+                "assignPublicIp": "ENABLED"
+              }
+            }'
 
   # ─────────────────────────────────────────────
   # Job 6: Post-Deploy Smoke Tests
