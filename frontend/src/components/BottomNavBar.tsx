@@ -1,5 +1,4 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 
 interface NavItem {
     icon: string;
@@ -18,41 +17,24 @@ const NAV_ITEMS: NavItem[] = [
 export default function BottomNavBar() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { t } = useTranslation();
 
     return (
-        <nav className="border-t border-slate-200/60 bg-white/95 backdrop-blur-xl safe-bottom">
-            <div className="mx-auto w-full max-w-2xl lg:max-w-4xl flex items-center justify-between px-4 pt-2 pb-3">
-                {NAV_ITEMS.map((item) => {
-                    const isActive = location.pathname === item.path;
-                    return (
-                        <button
-                            key={item.path}
-                            onClick={() => navigate(item.path)}
-                            className={`flex flex-1 flex-col items-center gap-1 tap-scale transition-all duration-200 ${isActive ? 'text-primary' : 'text-slate-400 hover:text-slate-600'
-                                }`}
-                        >
-                            <span
-                                className={`material-symbols-outlined text-[24px] transition-transform duration-200 ${isActive ? 'animate-pop-in' : ''
-                                    }`}
-                                style={{
-                                    fontVariationSettings: isActive && item.iconFill ? "'FILL' 1" : "'FILL' 0",
-                                }}
-                            >
-                                {item.icon}
-                            </span>
-                            <span className={`text-[10px] font-bold uppercase tracking-tighter transition-colors ${isActive ? 'text-primary' : ''
-                                }`}>
-                                {t(item.labelKey)}
-                            </span>
-                            {/* Active indicator dot */}
-                            {isActive && (
-                                <div className="w-1 h-1 rounded-full bg-primary animate-pop-in" />
-                            )}
-                        </button>
-                    );
-                })}
-            </div>
+        <nav className="foodmap-bottom-nav" aria-label="Điều hướng di động">
+            {NAV_ITEMS.map((item) => {
+                const isActive = location.pathname === item.path || (item.path === '/tours' && location.pathname.startsWith('/tours/'));
+                return (
+                    <button
+                        key={item.path}
+                        onClick={() => navigate(item.path)}
+                        className={`foodmap-bottom-tab${isActive ? ' is-active' : ''}`}
+                        aria-current={isActive ? 'page' : undefined}
+                        type="button"
+                    >
+                        <span className="foodmap-bottom-icon material-symbols-outlined">{item.icon}</span>
+                        <span>{item.labelKey === 'nav.map' ? 'Bản đồ' : item.labelKey === 'nav.tours' ? 'Hành trình' : item.labelKey === 'nav.offline' ? 'Tải về' : 'Cài đặt'}</span>
+                    </button>
+                );
+            })}
         </nav>
     );
 }

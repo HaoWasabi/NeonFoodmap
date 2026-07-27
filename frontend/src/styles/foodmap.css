@@ -1,0 +1,309 @@
+:root {
+  --nf-primary: #006d38;
+  --nf-primary-dark: #004d28;
+  --nf-primary-tint: #e3efe8;
+  --nf-secondary: #4f54b4;
+  --nf-tertiary: #7c44a8;
+  --nf-bg: #f9f9fa;
+  --nf-surface: #ffffff;
+  --nf-surface-dim: #edeef;
+  --nf-ink: #191c1d;
+  --nf-muted: #5c6663;
+  --nf-border: rgba(25, 28, 29, 0.14);
+  --nf-ink-bg: #191c1d;
+  --nf-ink-surface: #23272a;
+  --nf-on-ink: #f9f9fa;
+  --nf-on-ink-muted: rgba(249, 249, 250, 0.68);
+  --nf-on-ink-border: rgba(249, 249, 250, 0.16);
+  --nf-gutter: clamp(20px, 4vw, 48px);
+  --nf-sidebar-expanded: 224px;
+  --nf-sidebar-collapsed: 72px;
+  --nf-topbar: 64px;
+  --nf-player: 80px;
+  --nf-mobile-header: 56px;
+  --nf-mobile-player: 74px;
+  --nf-mobile-nav: 72px;
+  --nf-fast: 150ms;
+  --nf-base: 250ms;
+  --nf-slow: 450ms;
+  --nf-expo: cubic-bezier(.16, 1, .3, 1);
+  --nf-standard: cubic-bezier(.4, 0, .2, 1);
+}
+
+.foodmap-icon { width: 20px; height: 20px; display: block; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: square; stroke-linejoin: miter; }
+.foodmap-icon-large { width: 28px; height: 28px; }
+.foodmap-label { font-family: 'Hanken Grotesk', sans-serif; font-size: .6875rem; font-weight: 700; letter-spacing: .09em; line-height: 1.2; text-transform: uppercase; }
+.foodmap-mono { font-family: 'JetBrains Mono', monospace; font-size: .68rem; letter-spacing: .01em; }
+.foodmap-body { font-family: 'Hanken Grotesk', sans-serif; font-size: .95rem; line-height: 1.55; }
+.foodmap-display { margin: 0; color: currentColor; font-family: 'Anton', sans-serif; font-size: clamp(3.6rem, 6.8vw, 6.8rem); font-weight: 400; letter-spacing: -.03em; line-height: .92; text-transform: uppercase; text-wrap: balance; }
+.foodmap-btn { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; border-radius: 0; padding: 9px 14px; background: transparent; color: inherit; cursor: pointer; font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; transition: background var(--nf-fast), color var(--nf-fast), border-color var(--nf-fast), transform var(--nf-fast); }
+.foodmap-btn:hover { transform: scale(1.02); }
+.foodmap-btn:active { transform: scale(.98); }
+.foodmap-btn:focus-visible, .foodmap-icon-button:focus-visible, .foodmap-nav-item:focus-visible, .foodmap-permission-action:focus-visible, .foodmap-language-pair button:focus-visible, .foodmap-bottom-tab:focus-visible { outline: 2px solid var(--nf-primary); outline-offset: 2px; }
+.foodmap-btn-primary { background: var(--nf-primary); color: #fff; }
+.foodmap-btn-primary:hover { background: var(--nf-primary-dark); }
+.foodmap-btn-secondary { border-color: currentColor; color: currentColor; }
+.foodmap-btn-secondary:hover { background: var(--nf-ink); color: #fff; }
+.foodmap-chip { display: inline-flex; align-items: center; border-radius: 999px; padding: 5px 10px; font-size: .65rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.foodmap-chip-primary { background: var(--nf-primary); color: #fff; }
+.foodmap-chip-outline { border: 1px solid currentColor; color: inherit; }
+
+/* Sketch 001 onboarding */
+.foodmap-onboarding { position: fixed; inset: 0; z-index: 100; overflow: hidden; background: var(--nf-ink-bg); color: var(--nf-on-ink); }
+.foodmap-onboard-stage { position: absolute; inset: 0; opacity: 0; pointer-events: none; transform: translateY(16px); transition: opacity var(--nf-slow) var(--nf-standard), transform var(--nf-slow) var(--nf-expo); }
+.foodmap-onboard-stage.is-visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.foodmap-splash { display: grid; place-items: center; padding: var(--nf-gutter); background: var(--nf-ink-bg); }
+.foodmap-splash::before, .foodmap-splash::after { content: ''; position: absolute; border-radius: 50%; mix-blend-mode: screen; pointer-events: none; }
+.foodmap-splash::before { width: min(54vw, 620px); aspect-ratio: 1; background: var(--nf-primary); opacity: .32; right: -12vw; top: -18vw; }
+.foodmap-splash::after { width: min(42vw, 460px); aspect-ratio: 1; background: var(--nf-secondary); opacity: .28; right: 20vw; top: 8vh; }
+.foodmap-splash-inner { position: relative; z-index: 2; width: min(760px, 100%); text-align: center; }
+.foodmap-splash-wordmark { display: block; width: min(720px, 86vw); height: auto; margin: auto; overflow: visible; }
+.foodmap-splash-wordmark text { fill: transparent; stroke: var(--nf-on-ink); stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1600; stroke-dashoffset: 1600; font-family: 'Caveat', cursive; font-size: 154px; font-weight: 700; animation: nf-handwrite 2.15s var(--nf-expo) .18s forwards, nf-ink-fill .45s var(--nf-standard) 1.9s forwards; }
+.foodmap-splash-inner > .foodmap-body { max-width: 42ch; margin: 20px auto 0; color: var(--nf-on-ink-muted); opacity: 0; transform: translateY(12px); animation: nf-splash-caption .42s var(--nf-expo) 2.05s forwards; }
+.foodmap-splash-meta { display: flex; justify-content: center; gap: 16px; margin-top: 32px; color: var(--nf-on-ink-muted); opacity: 0; animation: nf-splash-caption .42s var(--nf-expo) 2.18s forwards; }
+.foodmap-splash-progress { position: absolute; right: var(--nf-gutter); bottom: max(24px, env(safe-area-inset-bottom)); left: var(--nf-gutter); height: 2px; overflow: hidden; background: var(--nf-on-ink-border); }
+.foodmap-splash-progress span { display: block; width: 100%; height: 100%; background: var(--nf-primary); transform: scaleX(0); transform-origin: left; animation: nf-splash-progress 3.2s linear forwards; }
+.foodmap-skip-splash { position: absolute; z-index: 4; top: max(20px, env(safe-area-inset-top)); right: var(--nf-gutter); color: var(--nf-on-ink); border-color: var(--nf-on-ink-border); }
+.foodmap-onboarding-error { margin: 28px auto 0; max-width: 42ch; border: 1px solid var(--nf-on-ink-border); padding: 14px; color: var(--nf-on-ink); }
+.foodmap-onboarding-error p { margin: 0 0 12px; font-size: .82rem; }
+
+.foodmap-welcome { display: grid; grid-template-columns: minmax(0, 1.72fr) minmax(360px, .68fr); height: 100dvh; overflow: hidden; background: var(--nf-ink-bg); }
+.foodmap-welcome-visual { position: relative; height: 100dvh; overflow: hidden; border-right: 1px solid var(--nf-ink); }
+.foodmap-story-track { display: flex; width: 300%; height: 100dvh; transition: transform 850ms var(--nf-expo); will-change: transform; }
+.foodmap-story-scene { position: relative; flex: 1; height: 100dvh; min-height: 0; overflow: hidden; background: var(--nf-ink-bg); }
+.foodmap-scene-illustration { position: absolute; inset: -3%; width: 106%; height: 106%; max-width: none; transform: scale(1.02); will-change: transform; object-fit: cover; }
+.foodmap-story-scene.is-active .foodmap-scene-illustration { animation: nf-scene-drift 5.2s linear both; }
+.foodmap-scene-scrim { position: absolute; inset: 0; background: rgba(25, 28, 29, .52); }
+.foodmap-visual-copy { position: absolute; z-index: 2; right: clamp(270px, 25vw, 330px); bottom: clamp(28px, 4vw, 56px); left: clamp(28px, 4vw, 58px); max-width: 760px; }
+.foodmap-visual-index { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; color: rgba(249, 249, 250, .86); }
+.foodmap-visual-index::before { content: ''; display: block; width: 44px; height: 3px; background: var(--nf-primary); }
+.foodmap-visual-copy .foodmap-display { max-width: 10ch; color: #fff; }
+.foodmap-visual-caption { display: grid; grid-template-columns: 112px 1fr; gap: 20px; max-width: 650px; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(249, 249, 250, .36); color: rgba(249, 249, 250, .84); }
+.foodmap-visual-caption p { margin: 0; }
+.foodmap-story-rail { position: absolute; z-index: 5; top: 50%; right: 24px; width: 196px; border-top: 1px solid rgba(249, 249, 250, .42); transform: translateY(-50%); }
+.foodmap-story-step { position: relative; display: grid; grid-template-columns: 32px 1fr; align-items: center; gap: 10px; width: 100%; min-height: 54px; overflow: hidden; border: 0; border-bottom: 1px solid rgba(249, 249, 250, .26); padding: 10px 12px; background: rgba(25, 28, 29, .78); color: rgba(249, 249, 250, .64); cursor: pointer; text-align: left; }
+.foodmap-story-step:hover, .foodmap-story-step.is-active { background: var(--nf-primary); color: #fff; }
+.foodmap-story-step b { color: var(--nf-primary); font-family: 'JetBrains Mono', monospace; font-size: .7rem; }
+.foodmap-story-step.is-active b { color: #fff; }
+.foodmap-story-step > span:last-child { font-size: .72rem; font-weight: 800; letter-spacing: .035em; text-transform: uppercase; }
+.foodmap-story-progress { position: absolute; right: 0; bottom: 0; left: 0; height: 2px; transform: scaleX(0); transform-origin: left; background: #fff; }
+.foodmap-story-step.is-active .foodmap-story-progress { animation: nf-story-progress 4.8s linear forwards; }
+.foodmap-welcome-panel { display: grid; grid-template-rows: auto auto auto auto auto; align-content: start; gap: clamp(10px, 1.7vh, 16px); height: 100dvh; overflow: hidden; padding: 22px 26px 24px; background: var(--nf-bg); color: var(--nf-ink); }
+.foodmap-panel-top { display: flex; align-items: center; justify-content: space-between; padding-bottom: 14px; border-bottom: 1px solid var(--nf-border); }
+.foodmap-brand-script { font-family: 'Caveat', cursive; font-size: 1.65rem; font-weight: 700; letter-spacing: -.035em; line-height: 1; }
+.foodmap-language-pair { display: flex; border: 1px solid var(--nf-ink); }
+.foodmap-language-pair button { min-width: 42px; min-height: 30px; border: 0; border-right: 1px solid var(--nf-ink); background: transparent; color: var(--nf-ink); cursor: pointer; font-size: .65rem; font-weight: 800; }
+.foodmap-language-pair button:last-child { border-right: 0; }
+.foodmap-language-pair button.is-active { background: var(--nf-ink); color: #fff; }
+.foodmap-welcome-heading { margin: 30px 0 20px; }
+.foodmap-welcome-heading > .foodmap-label { display: block; margin-bottom: 7px; color: var(--nf-primary); }
+.foodmap-welcome-heading .foodmap-display { max-width: 8ch; font-size: clamp(2.8rem, 4.2vw, 4.7rem); line-height: .9; }
+.foodmap-welcome-heading p { max-width: 42ch; margin: 14px 0 0; font-size: .94rem; }
+.foodmap-route-ledger { display: none; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--nf-ink); border-left: 1px solid var(--nf-ink); }
+.foodmap-route-stop { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 7px; align-items: start; min-width: 0; min-height: 62px; border: 0; border-right: 1px solid var(--nf-ink); border-bottom: 1px solid var(--nf-ink); padding: 8px; background: var(--nf-surface); color: var(--nf-ink); cursor: pointer; text-align: left; }
+.foodmap-route-stop.is-active { background: var(--nf-primary); color: #fff; }
+.foodmap-route-stop strong, .foodmap-route-stop small { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.foodmap-route-stop strong { font-size: .71rem; line-height: 1.15; }
+.foodmap-route-stop small { margin-top: 3px; font-size: .62rem; line-height: 1.2; opacity: .68; }
+.foodmap-capability-strip { display: grid; grid-template-columns: repeat(3, 1fr); margin-bottom: 14px; border-top: 1px solid var(--nf-border); border-bottom: 1px solid var(--nf-border); }
+.foodmap-capability-strip > div { min-width: 0; padding: 8px 8px 9px; border-right: 1px solid var(--nf-border); }
+.foodmap-capability-strip > div:last-child { border-right: 0; }
+.foodmap-capability-strip .foodmap-mono { display: block; margin-bottom: 3px; color: var(--nf-primary); font-size: .54rem; }
+.foodmap-capability-strip strong { display: block; overflow: hidden; font-size: .64rem; line-height: 1.18; white-space: nowrap; text-overflow: ellipsis; }
+.foodmap-permission-card { min-height: 0; margin-top: auto; border-top: 1px solid var(--nf-ink); border-bottom: 1px solid var(--nf-ink); background: var(--nf-bg); }
+.foodmap-permission-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 50px; padding: 14px 0; border-bottom: 1px solid var(--nf-border); }
+.foodmap-permission-card-head .foodmap-label { display: block; margin-bottom: 2px; color: var(--nf-primary); }
+.foodmap-permission-card-head h2 { margin: 0; font-size: .9rem; }
+.foodmap-permission-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 12px; align-items: center; min-height: 58px; padding: 13px 0; border-bottom: 1px solid var(--nf-border); }
+.foodmap-permission-icon { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid rgba(25, 28, 29, .28); color: var(--nf-ink); }
+.foodmap-permission-icon .foodmap-icon { width: 18px; height: 18px; }
+.foodmap-permission-copy h3 { margin: 0 0 2px; font-size: .82rem; }
+.foodmap-permission-copy p { max-width: 38ch; margin: 0; color: var(--nf-muted); font-size: .72rem; line-height: 1.3; }
+.foodmap-permission-action { min-width: 92px; height: 34px; border: 1px solid var(--nf-ink); background: transparent; color: var(--nf-ink); cursor: pointer; font-size: .62rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.foodmap-permission-action.is-granted { border-color: var(--nf-primary); background: var(--nf-primary); color: #fff; }
+.foodmap-permission-footer { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; min-height: 52px; padding: 14px 0; }
+.foodmap-permission-status { display: flex; align-items: center; gap: 8px; color: var(--nf-muted); font-size: .68rem; }
+.foodmap-status-square { width: 8px; height: 8px; background: #8a6416; }
+.foodmap-permission-status.is-ready { color: var(--nf-primary); }
+.foodmap-permission-status.is-ready .foodmap-status-square { background: var(--nf-primary); }
+
+/* Sketch 001 app shell */
+.foodmap-shell { display: grid; grid-template-columns: var(--nf-sidebar-expanded) minmax(0, 1fr); width: 100%; height: 100dvh; overflow: hidden; background: var(--nf-bg); color: var(--nf-ink); transition: grid-template-columns var(--nf-slow) var(--nf-expo); }
+.foodmap-shell.is-collapsed { grid-template-columns: var(--nf-sidebar-collapsed) minmax(0, 1fr); }
+.foodmap-sidebar { position: relative; z-index: 20; display: flex; min-width: 0; overflow: hidden; flex-direction: column; border-right: 1px solid var(--nf-ink); background: var(--nf-surface); }
+.foodmap-sidebar-head { position: relative; display: flex; align-items: center; height: var(--nf-topbar); min-height: var(--nf-topbar); border-bottom: 1px solid var(--nf-ink); white-space: nowrap; }
+.foodmap-sidebar-brand { display: flex; align-items: center; gap: 10px; height: 100%; flex: 1; min-width: 0; overflow: hidden; padding: 0 12px; }
+.foodmap-brand-square { display: block; width: 11px; height: 11px; flex: none; background: var(--nf-primary); }
+.foodmap-sidebar-wordmark { display: flex; min-width: 0; flex-direction: column; justify-content: center; transition: opacity var(--nf-base), transform var(--nf-slow) var(--nf-expo); }
+.foodmap-sidebar-wordmark strong { overflow: hidden; font-family: 'Caveat', cursive; font-size: 1.34rem; font-weight: 700; letter-spacing: -.025em; line-height: .9; white-space: nowrap; text-overflow: ellipsis; }
+.foodmap-sidebar-wordmark small { margin-top: 4px; color: var(--nf-muted); font-family: 'JetBrains Mono', monospace; font-size: .48rem; letter-spacing: .08em; text-transform: uppercase; }
+.foodmap-sidebar-toggle { display: grid; place-items: center; width: 42px; height: 100%; border: 0; border-left: 1px solid var(--nf-ink); background: transparent; color: var(--nf-ink); cursor: pointer; }
+.foodmap-sidebar-toggle:hover { background: var(--nf-ink); color: #fff; }
+.foodmap-sidebar-nav { display: flex; flex-direction: column; padding-top: 8px; }
+.foodmap-nav-item { position: relative; display: grid; grid-template-columns: 52px minmax(0, 1fr) 26px; align-items: center; height: 48px; min-height: 48px; border: 0; border-bottom: 1px solid var(--nf-border); border-left: 4px solid transparent; background: transparent; color: var(--nf-ink); cursor: pointer; text-align: left; transition: background var(--nf-fast), border-color var(--nf-fast), color var(--nf-fast); }
+.foodmap-nav-item::after { content: ''; position: absolute; right: 12px; bottom: -1px; left: 52px; height: 2px; background: var(--nf-primary); transform: scaleX(0); transform-origin: left; transition: transform var(--nf-slow) var(--nf-expo); }
+.foodmap-nav-item:hover { background: var(--nf-surface-dim); }
+.foodmap-nav-item:hover::after, .foodmap-nav-item.is-active::after { transform: scaleX(1); }
+.foodmap-nav-item.is-active { border-left-color: var(--nf-primary); background: var(--nf-primary-tint); }
+.foodmap-nav-icon { display: grid; place-items: center; width: 52px; height: 48px; transition: transform var(--nf-fast), background var(--nf-fast), color var(--nf-fast); }
+.foodmap-nav-item.is-active .foodmap-nav-icon { background: var(--nf-primary); color: #fff; }
+.foodmap-nav-label { overflow: hidden; font-size: .79rem; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; transition: opacity var(--nf-base), transform var(--nf-slow) var(--nf-expo); }
+.foodmap-nav-index { padding-right: 8px; color: var(--nf-muted); font-family: 'JetBrains Mono', monospace; font-size: .6rem; text-align: right; transition: opacity var(--nf-base); }
+.foodmap-sidebar-route { position: relative; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 9px; margin: auto 10px 14px; overflow: hidden; border: 1px solid var(--nf-ink); padding: 10px 9px 13px; background: var(--nf-bg); }
+.foodmap-sidebar-route-mark { display: grid; place-items: center; width: 30px; height: 30px; background: var(--nf-ink); color: #fff; font-family: 'JetBrains Mono', monospace; font-size: .62rem; font-weight: 700; }
+.foodmap-sidebar-route-copy { min-width: 0; transition: opacity var(--nf-base), transform var(--nf-slow) var(--nf-expo); }
+.foodmap-sidebar-route-copy .foodmap-label { display: block; color: var(--nf-primary); font-size: .52rem; }
+.foodmap-sidebar-route-copy strong { display: block; overflow: hidden; margin: 3px 0; font-size: .7rem; line-height: 1.2; white-space: nowrap; text-overflow: ellipsis; }
+.foodmap-sidebar-route-copy .foodmap-mono { color: var(--nf-muted); font-size: .58rem; }
+.foodmap-sidebar-route-progress { position: absolute; right: 0; bottom: 0; left: 0; height: 3px; background: var(--nf-surface-dim); }
+.foodmap-sidebar-route-progress span { display: block; width: 42%; height: 100%; background: var(--nf-primary); }
+.foodmap-sidebar-foot { border-top: 1px solid var(--nf-ink); }
+.foodmap-sidebar-foot-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; min-height: 50px; overflow: hidden; border: 0; border-bottom: 1px solid var(--nf-border); padding: 0; background: transparent; color: var(--nf-ink); cursor: pointer; text-align: left; }
+.foodmap-sidebar-foot-copy { overflow: hidden; padding-right: 8px; color: var(--nf-muted); font-size: .66rem; white-space: nowrap; transition: opacity var(--nf-base), transform var(--nf-slow) var(--nf-expo); }
+.foodmap-sidebar-foot-copy strong { display: block; overflow: hidden; color: var(--nf-ink); font-size: .7rem; text-overflow: ellipsis; }
+.foodmap-replay-mark { font-size: 24px; line-height: 1; }
+.foodmap-shell.is-collapsed .foodmap-sidebar-wordmark, .foodmap-shell.is-collapsed .foodmap-nav-label, .foodmap-shell.is-collapsed .foodmap-nav-index, .foodmap-shell.is-collapsed .foodmap-sidebar-route-copy, .foodmap-shell.is-collapsed .foodmap-sidebar-foot-copy { opacity: 0; pointer-events: none; transform: translateX(-8px); }
+.foodmap-shell.is-collapsed .foodmap-sidebar-toggle { position: absolute; top: 0; left: 0; width: 72px; border-left: 0; background: transparent; }
+.foodmap-shell.is-collapsed .foodmap-sidebar-brand .foodmap-brand-square { opacity: 0; }
+.foodmap-shell.is-collapsed .foodmap-nav-item { grid-template-columns: 68px 0 0; border-left-width: 4px; }
+.foodmap-shell.is-collapsed .foodmap-nav-icon { width: 64px; }
+.foodmap-shell.is-collapsed .foodmap-nav-item::after { right: 12px; left: 12px; }
+.foodmap-shell.is-collapsed .foodmap-sidebar-route { grid-template-columns: 30px; margin: 0 10px 14px; }
+.foodmap-shell.is-collapsed .foodmap-sidebar-foot-row { grid-template-columns: 68px 0; }
+.foodmap-workspace { display: grid; grid-template-rows: var(--nf-topbar) minmax(0, 1fr) var(--nf-player); min-width: 0; min-height: 0; height: 100dvh; overflow: hidden; background: var(--nf-bg); }
+.foodmap-shell.has-no-audio .foodmap-workspace { grid-template-rows: var(--nf-topbar) minmax(0, 1fr); }
+.foodmap-shell.has-no-topbar .foodmap-workspace { grid-template-rows: minmax(0, 1fr) var(--nf-player); }
+.foodmap-shell.has-no-topbar.has-no-audio .foodmap-workspace { grid-template-rows: minmax(0, 1fr); }
+.foodmap-topbar { display: grid; grid-template-columns: minmax(240px, 1fr) auto auto auto; min-width: 0; border-bottom: 1px solid var(--nf-ink); background: var(--nf-bg); }
+.foodmap-search { display: flex; align-items: center; gap: 12px; min-width: 0; border-right: 1px solid var(--nf-ink); padding: 0 20px; color: var(--nf-ink); }
+.foodmap-search:focus-within { background: var(--nf-primary-tint); }
+.foodmap-search input { width: 100%; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; color: var(--nf-ink); font-size: .84rem; font-weight: 700; letter-spacing: .02em; }
+.foodmap-search input::placeholder { color: var(--nf-muted); opacity: 1; }
+.foodmap-top-control { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 112px; height: 100%; border: 0; border-right: 1px solid var(--nf-ink); background: transparent; color: var(--nf-ink); cursor: pointer; font-size: .7rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.foodmap-top-control:hover { background: var(--nf-ink); color: #fff; }
+.foodmap-top-control .foodmap-icon { width: 18px; height: 18px; }
+.foodmap-gps-live { color: var(--nf-primary); }
+.foodmap-gps-dot { position: relative; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.foodmap-gps-dot::after { content: ''; position: absolute; inset: -5px; border: 1px solid currentColor; border-radius: 50%; animation: nf-gps-ping 1.8s var(--nf-expo) infinite; }
+.foodmap-viewport { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: var(--nf-surface-dim); }
+.foodmap-mobile-header, .foodmap-mobile-player { display: none; }
+.foodmap-icon-button { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; }
+.foodmap-icon-button:hover { background: #fff; color: var(--nf-ink); }
+.foodmap-audio-dock { display: grid; grid-template-columns: 64px minmax(180px, .9fr) minmax(200px, 1.1fr) auto; min-width: 0; border-top: 2px solid var(--nf-ink); background: var(--nf-ink); color: #fff; }
+.foodmap-audio-play { display: grid; place-items: center; width: 64px; height: 100%; border: 0; border-right: 1px solid var(--nf-on-ink-border); background: var(--nf-primary); color: #fff; cursor: pointer; }
+.foodmap-audio-play:hover { background: var(--nf-primary-dark); }
+.foodmap-audio-copy { min-width: 0; border-right: 1px solid var(--nf-on-ink-border); padding: 16px 20px; }
+.foodmap-audio-copy strong, .foodmap-audio-copy span { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.foodmap-audio-copy strong { font-size: .86rem; }
+.foodmap-audio-copy span { margin-top: 3px; color: var(--nf-on-ink-muted); font-size: .7rem; }
+.foodmap-audio-progress { display: grid; grid-template-rows: 1fr auto; min-width: 0; border-right: 1px solid var(--nf-on-ink-border); padding: 16px 20px; }
+.foodmap-waveform { display: flex; align-items: center; gap: 3px; overflow: hidden; }
+.foodmap-waveform span { display: block; width: 3px; flex: none; background: rgba(249, 249, 250, .28); }
+.foodmap-waveform span.is-played { background: var(--nf-primary); }
+.foodmap-audio-time { display: flex; justify-content: space-between; color: var(--nf-on-ink-muted); font-family: 'JetBrains Mono', monospace; font-size: .62rem; }
+.foodmap-audio-tools { display: flex; align-items: center; gap: 8px; padding: 0 16px; }
+.foodmap-audio-tools .foodmap-icon-button { border-color: var(--nf-on-ink-border); }
+.foodmap-page-scroll { height: 100%; overflow-y: auto; padding: 0 clamp(16px, 3vw, 36px) 36px; }
+.foodmap-page-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 0 20px; border-bottom: 1px solid var(--nf-border); }
+.foodmap-page-heading-copy { display: flex; align-items: center; gap: 14px; }
+.foodmap-page-heading h1 { margin: 0; font-family: 'Anton', sans-serif; font-size: clamp(2.4rem, 5vw, 4.6rem); font-weight: 400; letter-spacing: -.03em; line-height: 1; text-transform: uppercase; }
+.foodmap-bottom-nav { display: none; }
+
+/* Sketch map slot helpers; actual Leaflet interactions remain in MapExplore. */
+.foodmap-map-page { position: relative; width: 100%; height: 100%; overflow: hidden; }
+.foodmap-map-layer { position: absolute; inset: 0; z-index: 0; }
+.foodmap-legacy-map-header { display: none; }
+.foodmap-map-layer .leaflet-container { height: 100%; width: 100%; background: var(--nf-surface-dim); }
+.foodmap-map-overlay { position: relative; z-index: 20; }
+.foodmap-map-top-status { position: absolute; top: 20px; right: 20px; }
+.foodmap-map-status { display: flex; align-items: center; gap: 8px; background: var(--nf-ink); color: #fff; padding: 8px 12px; font-family: 'JetBrains Mono', monospace; font-size: .62rem; }
+.foodmap-map-search-results { position: absolute; top: 74px; left: 20px; width: min(420px, calc(100% - 40px)); max-height: 280px; overflow-y: auto; border: 1px solid var(--nf-ink); background: #fff; }
+.foodmap-map-search-results button { display: flex; width: 100%; align-items: flex-start; gap: 12px; border: 0; border-bottom: 1px solid var(--nf-border); padding: 12px; background: #fff; color: var(--nf-ink); cursor: pointer; text-align: left; }
+.foodmap-map-search-results button:hover { background: var(--nf-primary-tint); }
+.foodmap-map-fab-stack { position: absolute; right: 20px; bottom: 20px; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+.foodmap-map-fab { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--nf-ink); background: var(--nf-bg); color: var(--nf-ink); cursor: pointer; }
+.foodmap-map-fab:hover { background: var(--nf-ink); color: #fff; }
+.foodmap-map-fab-primary { width: 58px; height: 58px; background: var(--nf-primary); color: #fff; }
+.foodmap-map-fab-primary:hover { background: var(--nf-primary-dark); }
+
+@keyframes nf-handwrite { to { stroke-dashoffset: 0; } }
+@keyframes nf-ink-fill { to { fill: var(--nf-on-ink); stroke: var(--nf-on-ink); } }
+@keyframes nf-splash-caption { to { opacity: 1; transform: translateY(0); } }
+@keyframes nf-splash-progress { to { transform: scaleX(1); } }
+@keyframes nf-scene-drift { from { transform: scale(1.02) translate3d(0, 0, 0); } to { transform: scale(1.09) translate3d(-1.2%, .8%, 0); } }
+@keyframes nf-story-progress { to { transform: scaleX(1); } }
+@keyframes nf-gps-ping { 0%, 100% { opacity: 0; transform: scale(.8); } 35% { opacity: 1; } 70% { opacity: 0; transform: scale(1.45); } }
+
+@media (max-width: 1100px) and (min-width: 768px) {
+  .foodmap-top-control { min-width: 82px; padding: 0 8px; }
+  .foodmap-voice-control { display: none; }
+  .foodmap-audio-dock { grid-template-columns: 64px minmax(160px, .9fr) minmax(180px, 1.1fr); }
+  .foodmap-audio-tools { display: none; }
+}
+
+@media (max-width: 767px) {
+  .foodmap-onboard-stage { overflow-y: auto; }
+  .foodmap-splash-wordmark text { font-size: 112px; }
+  .foodmap-splash-meta { flex-direction: column; gap: 8px; }
+  .foodmap-welcome { display: block; }
+  .foodmap-welcome-visual { position: absolute; inset: 0; border-right: 0; }
+  .foodmap-visual-copy { right: 16px; bottom: 24px; left: 16px; }
+  .foodmap-visual-copy .foodmap-display { font-size: clamp(3rem, 12vw, 4rem); line-height: 1.02; }
+  .foodmap-visual-caption { grid-template-columns: 88px 1fr; gap: 12px; }
+  .foodmap-story-rail { right: 16px; bottom: 16px; top: auto; width: calc(100% - 32px); transform: none; }
+  .foodmap-story-step { grid-template-columns: 24px 1fr; min-height: 44px; }
+  .foodmap-story-step > span:last-child { font-size: .56rem; }
+  .foodmap-welcome-panel { position: relative; z-index: 3; display: flex; width: 100%; height: 100dvh; min-height: 0; flex-direction: column; overflow-y: auto; padding: 18px 16px calc(20px + env(safe-area-inset-bottom)); background: transparent; color: #fff; }
+  .foodmap-panel-top { border-color: rgba(249, 249, 250, .34); }
+  .foodmap-language-pair { border-color: #fff; }
+  .foodmap-language-pair button { border-color: #fff; color: #fff; }
+  .foodmap-language-pair button.is-active { background: #fff; color: var(--nf-ink); }
+  .foodmap-welcome-heading { margin: 22px 0 16px; }
+  .foodmap-welcome-heading > .foodmap-label { display: none; }
+  .foodmap-welcome-heading .foodmap-display { max-width: 7ch; font-size: clamp(2.7rem, 12vw, 3.9rem); }
+  .foodmap-welcome-heading p { color: rgba(249, 249, 250, .82); font-size: .9rem; line-height: 1.45; }
+  .foodmap-route-ledger, .foodmap-capability-strip { display: none; }
+  .foodmap-permission-card { margin-top: auto; border: 1px solid var(--nf-ink); background: var(--nf-bg); color: var(--nf-ink); }
+  .foodmap-permission-card-head, .foodmap-permission-row, .foodmap-permission-footer { padding: 13px; }
+  .foodmap-permission-row { grid-template-columns: 38px minmax(0, 1fr) auto; gap: 11px; }
+  .foodmap-permission-action { min-width: 78px; }
+  .foodmap-shell { display: block; position: relative; }
+  .foodmap-sidebar, .foodmap-topbar, .foodmap-audio-dock { display: none; }
+  .foodmap-workspace { position: relative; display: block; height: 100dvh; }
+  .foodmap-mobile-header { position: absolute; z-index: 30; top: 0; right: 0; left: 0; display: flex; align-items: center; justify-content: space-between; height: calc(var(--nf-mobile-header) + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); border-bottom: 1px solid var(--nf-ink); background: var(--nf-bg); }
+  .foodmap-mobile-brand { display: flex; align-items: center; gap: 8px; height: var(--nf-mobile-header); padding-left: 16px; font-family: 'Caveat', cursive; font-size: 1.35rem; font-weight: 700; }
+  .foodmap-mobile-actions { display: flex; height: var(--nf-mobile-header); }
+  .foodmap-mobile-action { display: grid; place-items: center; width: 52px; height: 100%; border: 0; border-left: 1px solid var(--nf-ink); background: transparent; color: var(--nf-ink); cursor: pointer; }
+  .foodmap-mobile-action.foodmap-gps-live { color: var(--nf-primary); }
+  .foodmap-viewport { position: absolute; top: calc(var(--nf-mobile-header) + env(safe-area-inset-top)); right: 0; bottom: calc(var(--nf-mobile-nav) + var(--nf-mobile-player) + env(safe-area-inset-bottom)); left: 0; }
+  .foodmap-shell.has-no-audio .foodmap-viewport { bottom: calc(var(--nf-mobile-nav) + env(safe-area-inset-bottom)); }
+  .foodmap-shell.has-no-topbar .foodmap-viewport { top: 0; }
+  .foodmap-mobile-player { position: absolute; right: 0; bottom: calc(var(--nf-mobile-nav) + env(safe-area-inset-bottom)); left: 0; z-index: 35; display: grid; grid-template-columns: 56px minmax(0, 1fr) 48px; height: var(--nf-mobile-player); border-top: 2px solid var(--nf-ink); background: var(--nf-ink); color: #fff; }
+  .foodmap-mobile-player .foodmap-audio-play { width: 56px; }
+  .foodmap-mobile-player-copy { display: flex; min-width: 0; flex-direction: column; justify-content: center; padding: 12px; }
+  .foodmap-mobile-player-copy strong, .foodmap-mobile-player-copy span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .foodmap-mobile-player-copy strong { font-size: .82rem; }
+  .foodmap-mobile-player-copy span { margin-top: 3px; color: var(--nf-on-ink-muted); font-size: .68rem; }
+  .foodmap-mobile-player .foodmap-icon-button { width: 48px; height: 100%; border: 0; border-left: 1px solid var(--nf-on-ink-border); color: #fff; }
+  .foodmap-bottom-nav { position: absolute; right: 0; bottom: 0; left: 0; z-index: 40; display: grid; grid-template-columns: repeat(4, 1fr); height: calc(var(--nf-mobile-nav) + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); border-top: 2px solid var(--nf-ink); background: var(--nf-bg); }
+  .foodmap-bottom-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 0; border-right: 1px solid var(--nf-ink); background: var(--nf-bg); color: var(--nf-muted); cursor: pointer; font-size: .62rem; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
+  .foodmap-bottom-tab:last-child { border-right: 0; }
+  .foodmap-bottom-tab.is-active { background: var(--nf-primary); color: #fff; }
+  .foodmap-bottom-tab .foodmap-icon { width: 19px; height: 19px; }
+  .foodmap-page-scroll { padding: 0 16px 28px; }
+  .foodmap-page-heading { padding: 20px 0 16px; }
+  .foodmap-page-heading h1 { font-size: 2.7rem; }
+  .foodmap-map-search-results { top: 12px; left: 12px; width: calc(100% - 24px); }
+  .foodmap-map-top-status { top: 12px; right: 12px; }
+  .foodmap-map-fab-stack { right: 12px; bottom: 12px; }
+}
+
+@media (max-width: 420px) {
+  .foodmap-permission-copy p { font-size: .68rem; }
+  .foodmap-permission-action { min-width: 72px; padding: 0 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+  .foodmap-splash-wordmark text { stroke-dashoffset: 0; fill: var(--nf-on-ink); }
+}

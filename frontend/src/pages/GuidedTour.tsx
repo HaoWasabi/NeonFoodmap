@@ -1,18 +1,13 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Polyline, Circle, useMap, Popup, useMapEvents } from 'react-leaflet';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { MapContainer, TileLayer, Circle, Polyline, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useTranslation } from 'react-i18next';
-import type { Tour, POI, Media, Partner, Language } from '../types';
-import TourCard from '../components/TourCard';
-import AppLayout from '../components/AppLayout';
-import NarrationBottomSheet from '../components/NarrationBottomSheet';
-import ReviewCard from '../components/ReviewCard';
+import type { Language, Media, Partner, POI, Tour, TourReview } from '../types';
+import SketchFrame, { SketchIcon } from '../components/SketchFrame';
 import ReviewForm from '../components/ReviewForm';
-import { GuidedTourSkeleton } from '../components/Skeleton';
-import { staggerStyle } from '../components/Skeleton';
 import PremiumTourCheckout from '../components/PremiumTourCheckout';
+import NarrationBottomSheet from '../components/NarrationBottomSheet';
 import { getTours } from '../services/api';
 import { getOfflineToursFromPackages } from '../services/offlineStorage';
 import { useGeolocation } from '../hooks/useGeolocation';
@@ -22,757 +17,585 @@ import { useTourReviews } from '../hooks/useTourReviews';
 import { useApp } from '../context/AppContext';
 import { unlockAudioAndTTS } from '../hooks/useAudioPlayer';
 
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-(L.Icon.Default.prototype as any)._getIconUrl = undefined;
-delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
-L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIcon2x, iconUrl: markerIcon, shadowUrl: markerShadow });
-
-// Custom icons
-function createTourPOIIcon(index: number, status: 'completed' | 'current' | 'upcoming') {
-    const colors = { completed: '#94a3b8', current: '#ff6a00', upcoming: '#cbd5e1' };
-    const bg = colors[status];
-    return L.divIcon({
-        className: '',
-        html: `<div style="width:36px;height:44px;display:flex;flex-direction:column;align-items:center">
-      <div style="width:36px;height:36px;background:${bg};border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px ${bg}66;border:2.5px solid white;color:white;font-weight:800;font-size:14px">
-        ${index + 1}
-      </div>
-      <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid ${bg};margin-top:-1px"></div>
-    </div>`,
-        iconSize: [36, 44],
-        iconAnchor: [18, 44],
-        popupAnchor: [0, -44],
-    });
-}
-
-// Haversine distance
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-    const R = 6371000;
-    const φ1 = (lat1 * Math.PI) / 180;
-    const φ2 = (lat2 * Math.PI) / 180;
-    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-    const Δλ = ((lng2 - lng1) * Math.PI) / 180;
-    const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const R = 6371000;
+  const p1 = lat1 * Math.PI / 180;
+  const p2 = lat2 * Math.PI / 180;
+  const dp = (lat2 - lat1) * Math.PI / 180;
+  const dl = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Tính khoảng cách tới đường line nối POIs (point-to-line-segment distance)
 function pointToSegmentDistance(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
-    const dx = bx - ax;
-    const dy = by - ay;
-    if (dx === 0 && dy === 0) return haversineDistance(px, py, ax, ay);
-    let t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy);
-    t = Math.max(0, Math.min(1, t));
-    return haversineDistance(px, py, ax + t * dx, ay + t * dy);
+  const dx = bx - ax;
+  const dy = by - ay;
+  if (dx === 0 && dy === 0) return haversineDistance(px, py, ax, ay);
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)));
+  return haversineDistance(px, py, ax + t * dx, ay + t * dy);
 }
 
-function getMinDistanceToRoute(lat: number, lng: number, routePoints: [number, number][]): number {
-    let minDist = Infinity;
-    for (let i = 0; i < routePoints.length - 1; i++) {
-        const d = pointToSegmentDistance(lat, lng, routePoints[i][0], routePoints[i][1], routePoints[i + 1][0], routePoints[i + 1][1]);
-        if (d < minDist) minDist = d;
-    }
-    return minDist;
+function minRouteDistance(lat: number, lng: number, points: [number, number][]): number {
+  let min = Infinity;
+  for (let i = 0; i < points.length - 1; i += 1) min = Math.min(min, pointToSegmentDistance(lat, lng, points[i][0], points[i][1], points[i + 1][0], points[i + 1][1]));
+  return min;
 }
 
-// Component con để auto-fit bounds bản đồ
 function FitBounds({ points }: { points: [number, number][] }) {
-    const map = useMap();
-    useEffect(() => {
-        if (points.length > 0) {
-            const bounds = L.latLngBounds(points.map(p => L.latLng(p[0], p[1])));
-            map.fitBounds(bounds, { padding: [40, 40] });
-        }
-    }, [points, map]);
-    return null;
+  const map = useMap();
+  useEffect(() => {
+    const update = () => {
+      map.invalidateSize();
+      if (points.length) map.fitBounds(L.latLngBounds(points.map(([lat, lng]) => L.latLng(lat, lng))), { padding: [30, 30] });
+    };
+    const timer = window.setTimeout(update, 300);
+    window.addEventListener('resize', update);
+    return () => { window.clearTimeout(timer); window.removeEventListener('resize', update); };
+  }, [map, points]);
+  return null;
 }
 
-// Component cho phép click mock tọa độ
 function MapClickInterceptor({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
-    useMapEvents({
-        click(e) {
-            onMapClick(e.latlng.lat, e.latlng.lng);
-        }
-    });
-    return null;
+  useMapEvents({ click: (event) => onMapClick(event.latlng.lat, event.latlng.lng) });
+  return null;
 }
 
-const OFF_ROUTE_THRESHOLD_M = 100; // cảnh báo khi đi chệch >100m
-
-// Ước tính thời lượng TTS cho văn bản (trung bình 4 ký tự/giây)
-function estimateTTSDuration(text: string): string {
-    if (!text) return '0s';
-    const totalSeconds = Math.ceil(text.length / 4);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    if (minutes > 0) return `~${minutes}p ${seconds}s`;
-    return `~${seconds}s`;
+function getPOIStatus(index: number, current: number): 'done' | 'current' | 'upcoming' {
+  if (index < current) return 'done';
+  if (index === current) return 'current';
+  return 'upcoming';
 }
 
-type POIStatus = 'completed' | 'current' | 'upcoming';
-
-function getPOIStatus(index: number, currentIndex: number): POIStatus {
-    if (index < currentIndex) return 'completed';
-    if (index === currentIndex) return 'current';
-    return 'upcoming';
+function estimateAudio(text = ''): string {
+  const seconds = Math.max(1, Math.ceil(text.length / 4));
+  return seconds >= 60 ? `~${Math.floor(seconds / 60)}p ${seconds % 60}s` : `~${seconds}s`;
 }
+
+function createMarkerIcon(index: number) {
+  return L.divIcon({ className: '', html: `<div style="width:30px;height:30px;background:#006D38;border:2px solid #191C1D;color:#fff;display:grid;place-items:center;font:400 14px Anton,sans-serif">${index + 1}</div>`, iconSize: [30, 30], iconAnchor: [15, 15] });
+}
+
+
 
 export default function GuidedTour() {
-    const { t, i18n } = useTranslation();
-    const { user, openNarration, closeNarration, dispatch, narrationQueue } = useApp();
-    const [tours, setTours] = useState<Tour[]>([]);
-    const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
-    const [activeTab, setActiveTab] = useState<'overview' | 'route' | 'reviews'>('route');
-    const [currentPOIIndex, setCurrentPOIIndex] = useState(0);
-    const [tourStarted, setTourStarted] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [showMap, setShowMap] = useState(false);
-    const [showReviewForm, setShowReviewForm] = useState(false);
-    const [showPremiumCheckout, setShowPremiumCheckout] = useState(false);
-    const [narrationData, setNarrationData] = useState<{ poi: POI; media: Media | null; partners: Partner[] } | null>(null);
-    const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  const { user, openNarration, closeNarration, dispatch, narrationQueue } = useApp();
+  const [tours, setTours] = useState<Tour[]>([]);
+  const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'route' | 'reviews'>('overview');
+  const [currentPOIIndex, setCurrentPOIIndex] = useState(0);
+  const [tourStarted, setTourStarted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [showMap, setShowMap] = useState(false);
+  const [showChooser, setShowChooser] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [showPremiumCheckout, setShowPremiumCheckout] = useState(false);
+  const [panelRetracted, setPanelRetracted] = useState(false);
+  const [mobilePanelRetracted, setMobilePanelRetracted] = useState(false);
+  const [search, setSearch] = useState('');
+  const [narrationData, setNarrationData] = useState<{ poi: POI; media: Media | null; partners: Partner[] } | null>(null);
+  const { position, setMockLocation } = useGeolocation();
+  const { reviews, stats, addReview } = useTourReviews(selectedTour?.id || '');
+  const triggerNarrationRef = useRef<((poi: POI, type?: 'AUTO' | 'QR') => void) | null>(null);
 
-    const { position, setMockLocation } = useGeolocation();
-    const { reviews, stats, addReview } = useTourReviews(selectedTour?.id || '');
+  useEffect(() => {
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      getTours().catch(() => getOfflineToursFromPackages()).then((data) => { if (!cancelled) { setTours(data); setSelectedTour(data[0] || null); } }).catch(() => { if (!cancelled) { setTours([]); setSelectedTour(null); } }).finally(() => { if (!cancelled) setLoading(false); });
+    }, 300);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, []);
 
-    const TABS = [
-        { id: 'overview' as const, label: t('tour.tabOverview'), icon: 'info' },
-        { id: 'route' as const, label: t('tour.tabRoute'), icon: 'route' },
-        { id: 'reviews' as const, label: t('tour.tabReviews'), icon: 'star' },
-    ];
+  const currentLang = (i18n.language || 'vi') as Language;
+  const orderedPOIs = useMemo(() => selectedTour ? [...selectedTour.pois].sort((a, b) => a.sequence_order - b.sequence_order) : [], [selectedTour]);
+  const routePoints = useMemo<[number, number][]>(() => orderedPOIs.map(({ poi }) => [poi.latitude, poi.longitude]), [orderedPOIs]);
+  const poisForGeofence = useMemo(() => orderedPOIs.map(({ poi }) => poi), [orderedPOIs]);
+  const nextPOI = orderedPOIs[currentPOIIndex]?.poi;
+  const distanceToNext = position && nextPOI ? Math.round(haversineDistance(position.lat, position.lng, nextPOI.latitude, nextPOI.longitude)) : null;
+  const offRoute = Boolean(tourStarted && position && routePoints.length > 1 && minRouteDistance(position.lat, position.lng, routePoints) > 100);
+  const titleOf = (tour: Tour) => tour.translated_name?.[currentLang] || tour.translated_name?.vi || tour.name;
+  const descriptionOf = (tour: Tour) => tour.translated_description?.[currentLang] || tour.translated_description?.vi || tour.description || '';
+  const poiTitle = (poi: POI) => poi.translated_name || poi.name;
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            getTours()
-                .then((data) => {
-                    if (data.length > 0) {
-                        setTours(data);
-                        setSelectedTour(data[0] ?? null);
-                        return;
-                    }
+  const handleNarrationReady = useCallback((poi: POI, media: Media | null, partners: Partner[]) => { setNarrationData({ poi, media, partners }); openNarration(poi, media, partners); }, [openNarration]);
+  const { triggerNarration, finishNarration } = useNarrationEngine({ language: (i18n.language || localStorage.getItem('bcsd_language') || user?.preferred_language || 'vi') as Language, voiceRegion: user?.preferred_voice_region || 'mien_nam', onNarrationReady: handleNarrationReady, onNarrationConflict: (poi) => dispatch({ type: 'PUSH_TO_QUEUE', payload: poi }) });
+  useEffect(() => { triggerNarrationRef.current = triggerNarration; }, [triggerNarration]);
+  useEffect(() => { if (!tourStarted || narrationData || narrationQueue.length === 0) return; const timer = window.setTimeout(() => { const poi = narrationQueue[0]; dispatch({ type: 'REMOVE_FROM_QUEUE' }); triggerNarrationRef.current?.(poi, 'QR'); }, 300); return () => window.clearTimeout(timer); }, [dispatch, narrationData, narrationQueue, tourStarted]);
+  useGeofence({ pois: tourStarted ? poisForGeofence : [], position: position || null, onEnter: (poi) => { triggerNarration(poi, 'AUTO'); const idx = orderedPOIs.findIndex(({ poi: item }) => item.id === poi.id); if (idx >= currentPOIIndex) setCurrentPOIIndex(idx + 1); } });
 
-                    getOfflineToursFromPackages()
-                        .then((offlineTours) => {
-                            setTours(offlineTours);
-                            setSelectedTour(offlineTours[0] ?? null);
-                        })
-                        .catch(() => {
-                            setTours([]);
-                            setSelectedTour(null);
-                        });
-                })
-                .catch(async () => {
-                    try {
-                        const offlineTours = await getOfflineToursFromPackages();
-                        setTours(offlineTours);
-                        setSelectedTour(offlineTours[0] ?? null);
-                    } catch {
-                        setTours([]);
-                        setSelectedTour(null);
-                    }
-                })
-                .finally(() => setLoading(false));
-        }, 600);
-        return () => clearTimeout(timer);
-    }, []);
+  const startNarration = (poi: POI) => { unlockAudioAndTTS(); triggerNarration(poi, 'QR'); };
+  const closeNarrationSheet = async (duration: number) => { await finishNarration(duration); setNarrationData(null); closeNarration(); };
+  const selectTour = (tour: Tour) => { setSelectedTour(tour); setCurrentPOIIndex(0); setTourStarted(false); setShowChooser(false); };
+  const primaryAction = () => {
+    if (!selectedTour) return;
+    if (selectedTour.is_premium && !selectedTour.is_unlocked) { setShowPremiumCheckout(true); return; }
+    setTourStarted((value) => !value);
+  };
+  const advance = () => { if (currentPOIIndex < orderedPOIs.length - 1) setCurrentPOIIndex((value) => value + 1); };
+  const recenter = () => { const point = routePoints[Math.min(currentPOIIndex, routePoints.length - 1)]; if (point) setMockLocation(point[0], point[1]); };
+  const filteredTours = tours.filter((tour) => !search || `${tour.name} ${descriptionOf(tour)}`.toLowerCase().includes(search.toLowerCase()));
 
-    const orderedPOIs = useMemo(() => {
-        if (!selectedTour) return [];
-        return [...selectedTour.pois].sort((a, b) => a.sequence_order - b.sequence_order);
-    }, [selectedTour]);
+  if (loading) return <SketchFrame active="tours" searchPlaceholder="TÌM HÀNH TRÌNH HOẶC TRẠM..." hideTopbar={true}><div className="tour-page tour-loading"><div className="tour-loading-mark">NF</div><p>{t('tour.loadingTours')}</p></div></SketchFrame>;
+  if (!selectedTour) return <SketchFrame active="tours" searchPlaceholder="TÌM HÀNH TRÌNH HOẶC TRẠM..." hideTopbar={true}><div className="tour-page tour-empty"><h1>{t('tour.noTours')}</h1><p>{t('tour.downloadOfflinePrompt')}</p></div></SketchFrame>;
 
-    // Tọa độ route line
-    const routePoints = useMemo<[number, number][]>(() => {
-        return orderedPOIs.map(tp => [tp.poi.latitude, tp.poi.longitude]);
-    }, [orderedPOIs]);
-
-    // POIs dạng flat array cho geofence
-    const poisForGeofence = useMemo(() => orderedPOIs.map(tp => tp.poi), [orderedPOIs]);
-
-    // Narration callbacks
-    const handleNarrationReady = useCallback((poi: POI, media: Media | null, partners: Partner[]) => {
-        setNarrationData({ poi, media, partners });
-        openNarration(poi, media, partners);
-    }, [openNarration]);
-
-    const handleNarrationConflict = useCallback((newPoi: POI) => {
-        dispatch({ type: 'PUSH_TO_QUEUE', payload: newPoi });
-    }, [dispatch]);
-
-    // Ref để tránh stale closure khi gọi triggerNarration từ useEffect
-    const triggerNarrationRef = useRef<((poi: POI, type?: 'AUTO' | 'QR') => void) | null>(null);
-
-    const { triggerNarration, finishNarration } = useNarrationEngine({
-        language: (localStorage.getItem('bcsd_language') as Language) || user?.preferred_language || 'vi',
-        voiceRegion: user?.preferred_voice_region || 'mien_nam',
-        onNarrationReady: handleNarrationReady,
-        onNarrationConflict: handleNarrationConflict,
-    });
-
-    // Cập nhật ref mỗi lần triggerNarration thay đổi
-    useEffect(() => {
-        triggerNarrationRef.current = triggerNarration;
-    }, [triggerNarration]);
-
-    // ── Queue Auto-Play ──
-    // Khi narrationData đóng (null) VÀ queue còn POI → tự động phát tiếp
-    useEffect(() => {
-        if (!tourStarted) return;              // Tour chưa bắt đầu → bỏ qua
-        if (narrationData !== null) return;    // Đang phát → chờ
-        if (narrationQueue.length === 0) return; // Queue trống → không làm gì
-
-        const nextPoi = narrationQueue[0];
-        console.log('[Tour] Queue auto-play: dequeue & trigger', nextPoi.name);
-
-        // Delay nhỏ để NarrationBottomSheet unmount hoàn toàn (cleanup audio/TTS)
-        // trước khi trigger narration mới
-        const timer = setTimeout(() => {
-            dispatch({ type: 'REMOVE_FROM_QUEUE' });
-            // Dùng 'QR' để bypass anti-spam vì đây là queue intent
-            triggerNarrationRef.current?.(nextPoi, 'QR');
-        }, 300);
-
-        return () => clearTimeout(timer);
-    }, [narrationData, narrationQueue, tourStarted, dispatch]);
+  const completed = Math.min(currentPOIIndex, orderedPOIs.length);
+  const progress = orderedPOIs.length ? Math.round(completed / orderedPOIs.length * 100) : 0;
+  const tourMeta = `${String(orderedPOIs.length).padStart(2, '0')} ${t('tour.stopsLower')} · ${selectedTour.estimated_duration_min || 45} ${t('common.minutes')}`;
 
 
+  const renderOverview = () => <>
+    <div className="plan-head">
+      <div className="plan-kicker">
+        <div><span className={`sketch-chip ${selectedTour.is_premium ? 'sketch-chip-tertiary' : 'sketch-chip-secondary'}`} id="planBadge">{selectedTour.is_premium ? t('tour.premium') : t('tour.free')}</span></div>
+        <button className="sketch-btn sketch-btn-text" id="changeTour" onClick={() => setShowChooser(true)}>{t('tour.changeTour')}</button>
+      </div>
+      <h1 className="plan-title" id="planTitle">{titleOf(selectedTour)}</h1>
+      <p className="plan-intro" id="planIntro">{descriptionOf(selectedTour)}</p>
+      <div className="metrics-line">
+        <div className="metric"><span>{t('tour.length')}</span><strong id="metricDistance">1.8 KM</strong></div>
+        <div className="metric"><span>{t('tour.time')}</span><strong id="metricTime">{selectedTour.estimated_duration_min || 45} {t('common.minutes').toUpperCase()}</strong></div>
+        <div className="metric"><span>{t('tour.stops')}</span><strong id="metricStops">{String(orderedPOIs.length).padStart(2, '0')} {t('tour.stopsLower').toUpperCase()}</strong></div>
+      </div>
+      <button className="sketch-btn sketch-btn-primary plan-primary" id="primaryAction" onClick={primaryAction}>
+        {selectedTour.is_premium && !selectedTour.is_unlocked ? t('tour.unlockTour') : tourStarted ? t('tour.endTour') : t('tour.continueTour')}
+      </button>
+    </div>
+    <div className="plan-body">
+      <div className="progress-block">
+        <div className="progress-top">
+          <strong id="progressCopy">{t('tour.completed')} {completed} {t('tour.outOf')} {orderedPOIs.length} {t('tour.stopsLower')}</strong>
+          <span className="sketch-mono" id="progressPercent">{progress}%</span>
+        </div>
+        <div className="progress-track"><span id="progressBar" style={{ width: `${progress}%` }} /></div>
+      </div>
+      <div className="section-label"><h2>{t('tour.currentStop')}</h2><button onClick={() => setActiveTab('route')}>{t('tour.openRouteTab')}</button></div>
+      {nextPOI ? (
+        <article className="focus-stop">
+          <div className="focus-num" id="focusNum">{String(currentPOIIndex + 1).padStart(2, '0')}</div>
+          <div className="focus-copy">
+            <span className="sketch-label">{tourStarted ? t('tour.approaching') : t('tour.currentStop')}</span>
+            <strong id="focusName">{poiTitle(nextPOI)}</strong>
+            <span id="focusMeta">+{distanceToNext ?? '—'} M · AUDIO {estimateAudio(nextPOI.description)}</span>
+          </div>
+          <button className="sketch-icon-button focus-play" aria-label={t('qr.previewButton', { defaultValue: 'Nghe thử' })} onClick={() => startNarration(nextPOI)}>
+            <SketchIcon name="play" />
+          </button>
+        </article>
+      ) : <p className="tour-intro">{t('tour.allCompleted')}</p>}
+      <div className="tour-section-label"><h2>{t('tour.upNext')}</h2></div>
+      <div className="next-list" id="nextList">
+        {orderedPOIs.slice(currentPOIIndex + 1, currentPOIIndex + 3).map((item, offset) => (
+          <div className="next-row" key={item.poi.id}>
+            <span className="next-row-num">{String(currentPOIIndex + offset + 2).padStart(2, '0')}</span>
+            <div>
+              <strong>{poiTitle(item.poi)}</strong>
+              <span>{item.poi.category} · {estimateAudio(item.poi.description)}</span>
+            </div>
+            <span className="next-row-end">{distanceToNext ? `+${distanceToNext} M` : 'UPCOMING'}</span>
+          </div>
+        ))}
+      </div>
+      <details className="prototype-tools">
+        <summary>Tình huống thử nghiệm</summary>
+        <div className="prototype-actions">
+          <button className="sketch-btn sketch-btn-outline" onClick={advance}>Vào geofence kế tiếp</button>
+          <button className="sketch-btn sketch-btn-outline" onClick={recenter}>Định vị lại</button>
+        </div>
+      </details>
+    </div>
+  </>;
 
 
-
-
-    // Geofence engine - tự động kích hoạt narration khi đi vào vùng POI
-    useGeofence({
-        pois: tourStarted ? poisForGeofence : [],
-        position: position || null,
-        onEnter: (poi) => {
-            triggerNarration(poi, 'AUTO');
-            // Tự động advance currentPOIIndex
-            const idx = orderedPOIs.findIndex(tp => tp.poi.id === poi.id);
-            if (idx >= 0 && idx >= currentPOIIndex) {
-                setCurrentPOIIndex(idx + 1);
-            }
-        },
-    });
-
-    // Off-route detection (derived state)
-    const offRoute = useMemo(() => {
-        if (!tourStarted || !position || routePoints.length < 2) {
-            return false;
-        }
-        const dist = getMinDistanceToRoute(position.lat, position.lng, routePoints);
-        return dist > OFF_ROUTE_THRESHOLD_M;
-    }, [tourStarted, position, routePoints]);
-
-    // Khoảng cách thực tế đến điểm tiếp theo
-    const nextPOI: POI | undefined = orderedPOIs[currentPOIIndex]?.poi;
-    const distanceToNext = useMemo(() => {
-        if (!position || !nextPOI) return null;
-        return Math.round(haversineDistance(position.lat, position.lng, nextPOI.latitude, nextPOI.longitude));
-    }, [position, nextPOI]);
-
-    const walkTimeMin = distanceToNext ? Math.max(1, Math.round(distanceToNext / 80)) : null; // ~80m/phút tốc độ đi bộ
-
-    const handleNarrationClose = useCallback(async (duration: number) => {
-        await finishNarration(duration);
-        // Đóng UI narration. Nếu queue có POI tiếp theo,
-        // useEffect [narrationData, narrationQueue] sẽ tự kích hoạt sau khi narrationData = null.
-        setNarrationData(null);
-        closeNarration();
-    }, [finishNarration, closeNarration]);
-
-
-    const handlePOIPopupOpen = useCallback((poi: POI) => {
-        // Unlock NGAY LẬP TỨC từ event click của user
-        unlockAudioAndTTS();
-        
-        // Mẹo cho Windows/Chrome: Phát 1 câu rỗng ngay lập tức để giữ quyền "User Gesture"
-        if ('speechSynthesis' in window) {
-            const silent = new SpeechSynthesisUtterance(' ');
-            silent.volume = 0;
-            window.speechSynthesis.speak(silent);
-        }
-
-        console.log('[Tour] Triggering narration for:', poi.name);
-        triggerNarration(poi, 'AUTO');
-    }, [triggerNarration]);
-
-    if (loading) {
+  const renderRoute = () => <>
+    <div className="route-tab-head">
+      <h2>Lộ trình chi tiết</h2>
+      <p id="ledgerTitle">{titleOf(selectedTour)} · {orderedPOIs.length} trạm</p>
+    </div>
+    <div className="ledger-scroll" id="ledgerList">
+      {orderedPOIs.map((item, index) => {
+        const status = getPOIStatus(index, currentPOIIndex);
+        const locked = Boolean(selectedTour.is_premium && !selectedTour.is_unlocked && index > 0);
         return (
-            <AppLayout title={t('tour.title')} headerAction={
-                <button className="flex items-center justify-center size-10 rounded-full text-slate-400">
-                    <span className="material-symbols-outlined text-xl">search</span>
-                </button>
-            }>
-                <GuidedTourSkeleton />
-            </AppLayout>
+          <article className={`ledger-row ${locked ? 'locked' : status}`} key={item.poi.id}>
+            <span className="ledger-no">{String(index + 1).padStart(2, '0')}</span>
+            <div className="ledger-copy">
+              <strong>{poiTitle(item.poi)}</strong>
+              <span>{item.poi.category} · {estimateAudio(item.poi.description)}</span>
+            </div>
+            <div className="ledger-end">
+              {locked ? <button className="sketch-btn sketch-btn-tertiary" onClick={() => setShowPremiumCheckout(true)}>Mở khóa</button>
+                : status === 'current' ? <button className="sketch-btn sketch-btn-primary" onClick={() => startNarration(item.poi)}>Phát</button>
+                  : status === 'done' ? '✓' : `${index * 120 + 180} M`}
+            </div>
+          </article>
         );
-    }
+      })}
+    </div>
+  </>;
 
-    if (!selectedTour) {
-        return (
-            <AppLayout
-                title={t('tour.title')}
-                headerAction={
-                    <button className="flex items-center justify-center size-10 rounded-full text-slate-700 hover:bg-slate-100 tap-scale">
-                        <span className="material-symbols-outlined text-xl">search</span>
-                    </button>
-                }
-            >
-                <div className="px-4 py-10 text-center">
-                    <span className="material-symbols-outlined text-6xl text-slate-300 mb-3 block">hiking</span>
-                    <p className="text-slate-600 font-semibold">{t('tour.noTours', { defaultValue: 'Chưa có tour khả dụng' })}</p>
-                    <p className="text-slate-400 text-sm mt-1">{t('tour.tryAgainLater', { defaultValue: 'Vui lòng thử lại sau' })}</p>
+
+  const renderReviews = () => <>
+    <div className="review-tab-head">
+      <h2>Đánh giá du khách</h2>
+      <p>Tín hiệu chất lượng từ những người đã hoàn thành hành trình.</p>
+    </div>
+    <div className="review-scroll" data-review-content>
+      <div className="rating-overview">
+        <div className="rating-score">
+          <strong>{stats.average.toFixed(1)}</strong>
+          <span>NGOÀI {stats.total} ĐÁNH GIÁ</span>
+        </div>
+        <div className="rating-bars">
+          {[5, 4, 3, 2, 1].map((star) => {
+            const value = stats.total ? stats.distribution[star as 1 | 2 | 3 | 4 | 5] / stats.total * 100 : 0;
+            return (
+              <div className="rating-bar" key={star}>
+                <span>{star}</span>
+                <div className="rating-track"><i style={{ width: `${value}%` }} /></div>
+                <span>{Math.round(value)}%</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div className="review-ledger">
+        {reviews.length ? (
+          reviews.map((review: TourReview) => (
+            <article className="review-row" key={review.id}>
+              <div className="review-row-head">
+                <strong>{review.username}</strong>
+                <time>{new Date(review.created_at).toLocaleDateString('vi-VN', { day: 'numeric', month: 'short', year: 'numeric' })}</time>
+              </div>
+              <div className="review-stars">{'★'.repeat(Math.max(1, Math.min(5, review.rating)))}</div>
+              {review.comment && <p>{review.comment}</p>}
+            </article>
+          ))
+        ) : (
+          <p className="plan-intro" style={{ marginTop: 15 }}>Chưa có đánh giá.</p>
+        )}
+      </div>
+      <div className="review-cta">
+        <button className="sketch-btn sketch-btn-outline" style={{ width: '100%' }} onClick={() => setShowReviewForm(true)}>Viết đánh giá</button>
+      </div>
+    </div>
+  </>;
+
+
+  const renderOverviewMobile = () => <>
+    <div className="mobile-kicker">
+      <div><span className={`sketch-chip ${selectedTour.is_premium ? 'sketch-chip-tertiary' : 'sketch-chip-secondary'}`}>{selectedTour.is_premium ? 'Premium' : 'Miễn phí'}</span></div>
+      <button onClick={() => setShowChooser(true)}>Đổi hành trình</button>
+    </div>
+    <h1 className="mobile-title">{titleOf(selectedTour)}</h1>
+    <p className="mobile-intro">{descriptionOf(selectedTour)}</p>
+    <div className="mobile-metrics">
+      <div><span>Chiều dài</span><strong>1.8 KM</strong></div>
+      <div><span>Thời gian</span><strong>{selectedTour.estimated_duration_min || 45} PHÚT</strong></div>
+      <div><span>Số trạm</span><strong>{String(orderedPOIs.length).padStart(2, '0')} TRẠM</strong></div>
+    </div>
+    <button className="sketch-btn sketch-btn-primary" style={{ width: '100%', marginTop: 14 }} onClick={primaryAction}>
+      {selectedTour.is_premium && !selectedTour.is_unlocked ? 'Mở khóa' : tourStarted ? 'Kết thúc' : 'Bắt đầu hành trình'}
+    </button>
+    <div className="mobile-focus">
+      {nextPOI ? (
+        <>
+          <span className="sketch-label">{tourStarted ? 'Đang đến gần' : 'Trạm hiện tại'}</span>
+          <strong>{poiTitle(nextPOI)}</strong>
+          <span>+{distanceToNext ?? '—'} M · AUDIO {estimateAudio(nextPOI.description)}</span>
+        </>
+      ) : <p className="mobile-intro">Đã hoàn tất hành trình.</p>}
+    </div>
+    <div className="mobile-next">
+      {orderedPOIs.slice(currentPOIIndex + 1, currentPOIIndex + 3).map((item, offset) => (
+        <div className="next-row" key={item.poi.id}>
+          <span className="next-row-num">{String(currentPOIIndex + offset + 2).padStart(2, '0')}</span>
+          <div>
+            <strong>{poiTitle(item.poi)}</strong>
+            <span>{item.poi.category} · {estimateAudio(item.poi.description)}</span>
+          </div>
+          <span className="next-row-end">{distanceToNext ? `+${distanceToNext} M` : 'UP'}</span>
+        </div>
+      ))}
+    </div>
+  </>;
+
+
+  const renderRouteMobile = () => <>
+    <div className="mobile-route-head">
+      <h2>Lộ trình</h2>
+      <p>{titleOf(selectedTour)}</p>
+    </div>
+    {orderedPOIs.map((item, index) => {
+      const status = getPOIStatus(index, currentPOIIndex);
+      const locked = Boolean(selectedTour.is_premium && !selectedTour.is_unlocked && index > 0);
+      return (
+        <div className={`ledger-row ${locked ? 'locked' : status}`} key={item.poi.id}>
+          <span className="ledger-no">{String(index + 1).padStart(2, '0')}</span>
+          <div className="ledger-copy">
+            <strong>{poiTitle(item.poi)}</strong>
+            <span>{item.poi.category}</span>
+          </div>
+          <div className="ledger-end">
+            {locked ? <button className="sketch-btn sketch-btn-tertiary" onClick={() => setShowPremiumCheckout(true)}>Mở khóa</button>
+              : status === 'current' ? <button className="sketch-btn sketch-btn-primary" onClick={() => startNarration(item.poi)}>Phát</button>
+                : status === 'done' ? '✓' : `${index * 120 + 180} M`}
+          </div>
+        </div>
+      );
+    })}
+  </>;
+
+
+  const renderReviewsMobile = () => <>
+    <div className="mobile-review-head">
+      <h2>Đánh giá du khách</h2>
+      <p>Tín hiệu chất lượng từ những người đã hoàn thành hành trình.</p>
+    </div>
+    <div className="rating-overview">
+      <div className="rating-score">
+        <strong>{stats.average.toFixed(1)}</strong>
+        <span>NGOÀI {stats.total} ĐÁNH GIÁ</span>
+      </div>
+      <div className="rating-bars">
+        {[5, 4, 3, 2, 1].map((star) => {
+          const value = stats.total ? stats.distribution[star as 1 | 2 | 3 | 4 | 5] / stats.total * 100 : 0;
+          return (
+            <div className="rating-bar" key={star}>
+              <span>{star}</span>
+              <div className="rating-track"><i style={{ width: `${value}%` }} /></div>
+              <span>{Math.round(value)}%</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+    <div className="review-ledger">
+      {reviews.length ? (
+        reviews.map((review: TourReview) => (
+          <article className="review-row" key={review.id}>
+            <div className="review-row-head">
+              <strong>{review.username}</strong>
+              <time>{new Date(review.created_at).toLocaleDateString('vi-VN', { day: 'numeric', month: 'short', year: 'numeric' })}</time>
+            </div>
+            <div className="review-stars">{'★'.repeat(Math.max(1, Math.min(5, review.rating)))}</div>
+            {review.comment && <p>{review.comment}</p>}
+          </article>
+        ))
+      ) : (
+        <p className="mobile-intro" style={{ marginTop: 15 }}>Chưa có đánh giá.</p>
+      )}
+    </div>
+    <div className="review-cta" style={{ marginTop: 18 }}>
+      <button className="sketch-btn sketch-btn-outline" style={{ width: '100%' }} onClick={() => setShowReviewForm(true)}>Viết đánh giá sau hành trình</button>
+    </div>
+  </>;
+
+
+  return (
+    <SketchFrame active="tours" className="tour-frame" searchPlaceholder="TÌM HÀNH TRÌNH HOẶC TRẠM..." searchValue={search} onSearchChange={setSearch} routeMark={String(currentPOIIndex + 1).padStart(2, '0')} routeTitle={titleOf(selectedTour)} routeMeta={tourMeta} routeProgress={progress} hideTopbar={true}>
+      <div className="tour-page">
+        <style>{`
+          .desktop-view { height: 100%; display: block; min-height: 0; }
+          .mobile-shell { display: none; height: 100%; min-height: 0; }
+          @media (max-width: 767px) {
+            .desktop-view { display: none !important; }
+            .mobile-shell { display: grid !important; grid-template-rows: 56px minmax(0, 1fr) !important; }
+          }
+        `}</style>
+        <div className="desktop-view">
+          <section className={`tour-layout ${panelRetracted ? 'is-panel-retracted' : ''}`} id="tourLayout">
+            <div className="tour-map-pane" id="mapPane">
+
+              <div style={{ position: 'absolute', inset: 0 }}>
+                <MapContainer preferCanvas={true} center={routePoints[0] || [10.7579, 106.7031]} zoom={15} zoomControl={false} style={{ height: '100%', width: '100%' }}>
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
+                  <FitBounds points={routePoints} />
+                  {tourStarted && <MapClickInterceptor onMapClick={setMockLocation} />}
+                  <Polyline positions={routePoints} pathOptions={{ color: '#006D38', weight: 4, dashArray: '8 4' }} />
+                  {orderedPOIs.map((item, index) => <Marker key={item.poi.id} position={[item.poi.latitude, item.poi.longitude]} icon={createMarkerIcon(index)} eventHandlers={{ click: () => startNarration(item.poi) }}><Popup>{poiTitle(item.poi)}</Popup></Marker>)}
+                  {orderedPOIs.map((item) => <Circle key={`circle-${item.poi.id}`} center={[item.poi.latitude, item.poi.longitude]} radius={item.poi.geofence_radius} pathOptions={{ color: '#006D38', fillColor: '#006D38', fillOpacity: .06, weight: 1, dashArray: '4 4' }} />)}
+                </MapContainer>
+              </div>
+
+              <div className="tour-map-summary" id="mapSummary">
+                <div className="map-summary-top">
+                  <span className="sketch-label">Lộ trình đang chọn</span>
+                  <span className={`sketch-chip ${selectedTour.is_premium ? 'sketch-chip-tertiary' : 'sketch-chip-secondary'}`} id="mapBadge">{selectedTour.is_premium ? 'Premium' : 'Miễn phí'}</span>
                 </div>
-            </AppLayout>
-        );
-    }
+                <h2 id="mapTourTitle">{titleOf(selectedTour)}</h2>
+                <p id="mapTourMeta">{tourMeta}</p>
+              </div>
+              {offRoute && (
+                <div className="tour-offroute is-visible" id="offroute">
+                  <div><strong>[CẢNH BÁO] Bạn đã lệch khỏi tuyến</strong><span>GPS vẫn hoạt động · Chạm định vị lại</span></div>
+                  <button className="sketch-btn sketch-btn-outline" id="recenter" onClick={recenter}>Định vị lại</button>
+                </div>
+              )}
+              <div className="tour-map-controls">
+                <button className="sketch-icon-button" aria-label="Phóng to">+</button>
+                <button className="sketch-icon-button" aria-label="Thu nhỏ">−</button>
+              </div>
+              <div className="tour-map-footer">
+                <div className="tour-distance"><span className="sketch-label">Còn lại</span><strong id="mapDistance">{distanceToNext ?? '—'} M</strong></div>
+                <div className="tour-footer-copy"><span className="sketch-label" id="mapStepLabel">Trạm {String(Math.min(currentPOIIndex + 1, orderedPOIs.length)).padStart(2, '0')} / {String(orderedPOIs.length).padStart(2, '0')}</span><strong id="mapStopName">{nextPOI ? poiTitle(nextPOI) : 'Đã hoàn tất hành trình'}</strong></div>
+                <div className="tour-footer-action"><button className="sketch-btn sketch-btn-outline" onClick={() => setShowMap(true)}>Xem các trạm</button></div>
+              </div>
+            </div>
 
-    return (
-        <AppLayout
-            title={t('tour.title')}
-            headerAction={
-                <button className="flex items-center justify-center size-10 rounded-full text-slate-700 hover:bg-slate-100 tap-scale">
-                    <span className="material-symbols-outlined text-xl">search</span>
+            <aside className="plan-pane" id="planPane" aria-label="Chi tiết hành trình">
+              <nav className="retractable-tabs" role="tablist" aria-label="Nội dung hành trình" aria-orientation="vertical" data-retractable-tabs="desktop">
+                <button className="retractable-tab" id="desktopTabOverview" role="tab" aria-selected={activeTab === 'overview'} aria-controls="desktopPanelOverview" tabIndex={activeTab === 'overview' ? 0 : -1} data-tour-tab="overview" data-tab-scope="desktop" onClick={() => setActiveTab('overview')}>
+                  <SketchIcon name="route" className="icon" /><span className="retractable-tab-label">Tổng quan</span><span className="retractable-tab-index">01</span>
                 </button>
-            }
-        >
-            {/* Tabs */}
-            <div className="bg-white border-b border-slate-100 px-4 sticky top-0 z-10">
-                <div className="flex gap-1">
-                    {TABS.map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`flex-1 py-3 text-sm font-bold border-b-[3px] transition-all duration-200 tap-scale flex items-center justify-center gap-1.5 ${activeTab === tab.id
-                                ? 'border-primary text-primary'
-                                : 'border-transparent text-slate-400 hover:text-slate-600'
-                                }`}
-                        >
-                            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: activeTab === tab.id ? "'FILL' 1" : "'FILL' 0" }}>
-                                {tab.icon}
-                            </span>
-                            {tab.label}
-                        </button>
-                    ))}
+                <button className="retractable-tab" id="desktopTabRoute" role="tab" aria-selected={activeTab === 'route'} aria-controls="desktopPanelRoute" tabIndex={activeTab === 'route' ? 0 : -1} data-tour-tab="route" data-tab-scope="desktop" onClick={() => setActiveTab('route')}>
+                  <SketchIcon name="playlist" className="icon" /><span className="retractable-tab-label">Lộ trình</span><span className="retractable-tab-index">02</span>
+                </button>
+                <button className="retractable-tab" id="desktopTabReviews" role="tab" aria-selected={activeTab === 'reviews'} aria-controls="desktopPanelReviews" tabIndex={activeTab === 'reviews' ? 0 : -1} data-tour-tab="reviews" data-tab-scope="desktop" onClick={() => setActiveTab('reviews')}>
+                  <SketchIcon name="star" className="icon" /><span className="retractable-tab-label">Đánh giá</span><span className="retractable-tab-index">03</span>
+                </button>
+                <button className="panel-retract-toggle" id="desktopPanelToggle" aria-label="Thu gọn bảng chi tiết" aria-expanded={!panelRetracted} aria-controls="tourTabPanels" onClick={() => setPanelRetracted(!panelRetracted)}>
+                  <SketchIcon name={panelRetracted ? 'chevron-right' : 'chevron-left'} className="icon" />
+                </button>
+              </nav>
+
+              <div className="tour-tab-panels" id="tourTabPanels">
+                <section className="tour-tab-panel" id="desktopPanelOverview" role="tabpanel" aria-labelledby="desktopTabOverview" data-tour-panel="overview" data-tab-scope="desktop" hidden={activeTab !== 'overview'}>
+                  {renderOverview()}
+                </section>
+                <section className="tour-tab-panel route-tab-panel" id="desktopPanelRoute" role="tabpanel" aria-labelledby="desktopTabRoute" data-tour-panel="route" data-tab-scope="desktop" hidden={activeTab !== 'route'}>
+                  {renderRoute()}
+                </section>
+                <section className="tour-tab-panel review-tab-panel" id="desktopPanelReviews" role="tabpanel" aria-labelledby="desktopTabReviews" data-tour-panel="reviews" data-tab-scope="desktop" hidden={activeTab !== 'reviews'}>
+                  {renderReviews()}
+                </section>
+              </div>
+            </aside>
+          </section>
+        </div>
+
+        <div className={`mobile-shell ${mobilePanelRetracted ? 'is-panel-retracted' : ''}`} id="mobileShell">
+          <header className="mobile-head">
+            <div className="mobile-brand"><span className="brand-square" /><strong>NeonFoodmap</strong></div>
+            <button onClick={() => { /* Settings handler */ }}><SketchIcon name="settings" /></button>
+          </header>
+
+          <main className="mobile-main">
+            <section className="mobile-map">
+
+              <div style={{ position: 'absolute', inset: 0 }}>
+                <MapContainer preferCanvas={true} center={routePoints[0] || [10.7579, 106.7031]} zoom={15} zoomControl={false} style={{ height: '100%', width: '100%' }}>
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
+                  <FitBounds points={routePoints} />
+                  {tourStarted && <MapClickInterceptor onMapClick={setMockLocation} />}
+                  <Polyline positions={routePoints} pathOptions={{ color: '#006D38', weight: 4, dashArray: '8 4' }} />
+                  {orderedPOIs.map((item, index) => <Marker key={item.poi.id} position={[item.poi.latitude, item.poi.longitude]} icon={createMarkerIcon(index)} eventHandlers={{ click: () => startNarration(item.poi) }}><Popup>{poiTitle(item.poi)}</Popup></Marker>)}
+                  {orderedPOIs.map((item) => <Circle key={`circle-${item.poi.id}`} center={[item.poi.latitude, item.poi.longitude]} radius={item.poi.geofence_radius} pathOptions={{ color: '#006D38', fillColor: '#006D38', fillOpacity: .06, weight: 1, dashArray: '4 4' }} />)}
+                </MapContainer>
+              </div>
+
+              <div className="mobile-map-card">
+                <strong>{titleOf(selectedTour)}</strong>
+                <span className={`sketch-chip ${selectedTour.is_premium ? 'sketch-chip-tertiary' : 'sketch-chip-secondary'}`}>{selectedTour.is_premium ? 'Premium' : 'Miễn phí'}</span>
+              </div>
+              {offRoute && (
+                <div className="offroute is-visible">
+                  <div><strong>[CẢNH BÁO] Bạn đã lệch khỏi tuyến</strong><span>GPS vẫn hoạt động</span></div>
+                  <button className="sketch-btn sketch-btn-outline" onClick={recenter}>Định vị lại</button>
                 </div>
+              )}
+              <div className="mobile-map-footer">
+                <div><span className="sketch-label">Còn lại</span><strong>{distanceToNext ?? '—'} M</strong></div>
+                <div><span className="sketch-label">Trạm {String(Math.min(currentPOIIndex + 1, orderedPOIs.length)).padStart(2, '0')} / {String(orderedPOIs.length).padStart(2, '0')}</span><strong>{nextPOI ? poiTitle(nextPOI) : 'Hoàn tất'}</strong></div>
+              </div>
+            </section>
+
+            <div className="mobile-tab-shell">
+              <nav className="mobile-tabs" role="tablist" aria-label="Nội dung hành trình" aria-orientation="horizontal" data-retractable-tabs="mobile">
+                <button className="mobile-tab" id="mobileTabOverview" role="tab" aria-selected={activeTab === 'overview'} aria-controls="mobilePanelOverview" tabIndex={activeTab === 'overview' ? 0 : -1} data-tour-tab="overview" data-tab-scope="mobile" onClick={() => setActiveTab('overview')}>
+                  <SketchIcon name="route" className="icon" /> Tổng quan
+                </button>
+                <button className="mobile-tab" id="mobileTabRoute" role="tab" aria-selected={activeTab === 'route'} aria-controls="mobilePanelRoute" tabIndex={activeTab === 'route' ? 0 : -1} data-tour-tab="route" data-tab-scope="mobile" onClick={() => setActiveTab('route')}>
+                  <SketchIcon name="playlist" className="icon" /> Lộ trình
+                </button>
+                <button className="mobile-tab" id="mobileTabReviews" role="tab" aria-selected={activeTab === 'reviews'} aria-controls="mobilePanelReviews" tabIndex={activeTab === 'reviews' ? 0 : -1} data-tour-tab="reviews" data-tab-scope="mobile" onClick={() => setActiveTab('reviews')}>
+                  <SketchIcon name="star" className="icon" /> Đánh giá
+                </button>
+                <button className="mobile-panel-toggle" id="mobilePanelToggle" aria-label="Thu gọn bảng chi tiết" aria-expanded={!mobilePanelRetracted} aria-controls="mobileTabPanels" onClick={() => setMobilePanelRetracted(!mobilePanelRetracted)}>
+                  <SketchIcon name={mobilePanelRetracted ? 'chevron-up' : 'chevron-down'} className="icon" />
+                </button>
+              </nav>
+
+              <div className="mobile-tab-panels" id="mobileTabPanels">
+                <section className="mobile-plan mobile-tab-panel" id="mobilePanelOverview" role="tabpanel" aria-labelledby="mobileTabOverview" data-tour-panel="overview" data-tab-scope="mobile" hidden={activeTab !== 'overview'}>
+                  {renderOverviewMobile()}
+                </section>
+                <section className="mobile-route-panel mobile-tab-panel" id="mobilePanelRoute" role="tabpanel" aria-labelledby="mobileTabRoute" data-tour-panel="route" data-tab-scope="mobile" hidden={activeTab !== 'route'}>
+                  {renderRouteMobile()}
+                </section>
+                <section className="mobile-review-panel mobile-tab-panel" id="mobilePanelReviews" role="tabpanel" aria-labelledby="mobileTabReviews" data-tour-panel="reviews" data-tab-scope="mobile" hidden={activeTab !== 'reviews'}>
+                  {renderReviewsMobile()}
+                </section>
+              </div>
             </div>
+          </main>
+        </div>
+      </div>
 
-            {/* Off-route Alert */}
-            {offRoute && tourStarted && (
-                <div className="mx-4 mt-3 animate-bounce-in">
-                    <div className="rounded-xl bg-red-50 border border-red-200 p-3 flex items-center gap-2">
-                        <span className="material-symbols-outlined text-red-500 text-lg animate-pulse" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
-                        <p className="text-xs font-bold text-red-600 flex-1">{t('tour.offRoute')}</p>
-                    </div>
-                </div>
-            )}
-
-            {/* Next Stop Banner */}
-            {tourStarted && nextPOI && (
-                <div className="p-4 animate-fade-slide-up">
-                    <div className="flex flex-col gap-3 rounded-2xl border border-primary\/20 bg-primary\/5 p-4">
-                        <div className="flex items-center gap-2">
-                            <div className="size-8 rounded-full bg-primary flex items-center justify-center animate-pulse-glow">
-                                <span className="material-symbols-outlined text-white text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>near_me</span>
-                            </div>
-                            <div>
-                                <p className="text-slate-900 text-sm font-bold">{t('tour.nextStop')}</p>
-                                <p className="text-primary text-base font-bold">{nextPOI.translated_name || nextPOI.name}</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <p className="text-slate-500 text-xs">
-                                {distanceToNext !== null && walkTimeMin !== null
-                                    ? t('tour.distanceWalk', { distance: distanceToNext, time: walkTimeMin })
-                                    : t('tour.distanceWalk', { distance: '—', time: '—' })
-                                }
-                            </p>
-                            <button className="px-5 py-2 bg-primary text-white text-xs font-bold rounded-full shadow-lg shadow-primary\/20 tap-scale">
-                                {t('tour.getDirections')}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Tour Grid/Carousel */}
-            <div className="py-4">
-                <h3 className="text-slate-900 text-base font-bold px-4 pb-3">{t('tour.exploreTours')}</h3>
-                <div className="px-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {tours.map((tour, i) => (
-                            <div key={tour.id} className="animate-stagger-item" style={staggerStyle(i)}>
-                                <TourCard
-                                    tour={tour}
-                                    isActive={selectedTour.id === tour.id}
-                                    onClick={() => {
-                                        setSelectedTour(tour);
-                                        // Auto switch to route tab if not already
-                                        if (activeTab === 'overview') setActiveTab('route');
-                                    }}
-                                    onDetailClick={() => navigate(`/tours/${tour.id}`)}
-                                />
-                            </div>
-                        ))}
-                    </div>
-                </div>
+      {showChooser && (
+        <div className="scrim is-visible" role="dialog" aria-modal="true" style={{ zIndex: 9999 }}>
+          <div className="modal">
+            <div className="modal-head">
+              <h2>Chọn hành trình</h2>
+              <button className="sketch-icon-button" onClick={() => setShowChooser(false)} aria-label="Đóng">×</button>
             </div>
-
-            {/* Route Tab */}
-            {activeTab === 'route' && (
-                <div className="px-4 pb-4 animate-fade-slide-up">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-slate-900 text-base font-bold">{t('tour.routeDetail')}</h3>
-                        {orderedPOIs.length > 1 && (
-                            <button
-                                onClick={() => setShowMap(!showMap)}
-                                className="flex items-center gap-1 px-3 py-1.5 bg-primary/10 text-primary text-xs font-bold rounded-lg tap-scale"
-                            >
-                                <span className="material-symbols-outlined text-sm">{showMap ? 'list' : 'map'}</span>
-                                {showMap ? t('tour.tabRoute') : t('tour.viewOnMap')}
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Real Leaflet Map */}
-                    {showMap && orderedPOIs.length > 0 ? (
-                        <div className="relative w-full h-64 rounded-2xl overflow-hidden mb-6 border border-slate-200/60 shadow-inner">
-                            <MapContainer
-                                center={[orderedPOIs[0].poi.latitude, orderedPOIs[0].poi.longitude]}
-                                zoom={16}
-                                zoomControl={false}
-                                style={{ height: '100%', width: '100%' }}
-                            >
-                                <TileLayer
-                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                                />
-                                <FitBounds points={routePoints} />
-
-                                {/* Enable Map Click to mock GPS */}
-                                {tourStarted && <MapClickInterceptor onMapClick={setMockLocation} />}
-
-                                {/* Route Polyline */}
-                                <Polyline
-                                    positions={routePoints}
-                                    pathOptions={{
-                                        color: '#ff6a00',
-                                        weight: 4,
-                                        opacity: 0.8,
-                                        dashArray: '8 6',
-                                        lineCap: 'round',
-                                    }}
-                                />
-
-                                {/* POI Markers */}
-                                {orderedPOIs.map((tp, index) => {
-                                    const status = getPOIStatus(index, currentPOIIndex);
-                                    return (
-                                        <Marker
-                                            key={tp.poi.id}
-                                            position={[tp.poi.latitude, tp.poi.longitude]}
-                                            icon={createTourPOIIcon(index, status)}
-                                            eventHandlers={{
-                                                popupopen: () => handlePOIPopupOpen(tp.poi)
-                                            }}
-                                        >
-                                            <Popup minWidth={200} maxWidth={280}>
-                                                {(tp.poi.cover_image_url || tp.poi.image_url) && (
-                                                    <div className="w-full h-32 mb-3 -mt-1 -mx-1 overflow-hidden" style={{ width: 'calc(100% + 8px)' }}>
-                                                        <img
-                                                            src={tp.poi.cover_image_url || tp.poi.image_url}
-                                                            alt={tp.poi.name}
-                                                            className="w-full h-full object-cover rounded-t-lg"
-                                                        />
-                                                    </div>
-                                                )}
-                                                <div className="text-sm font-semibold">{tp.poi.translated_name || tp.poi.name}</div>
-                                                <div className="text-xs text-slate-600 mt-1 leading-relaxed line-clamp-3">
-                                                    {(tp.poi.translated_description || tp.poi.description).slice(0, 150)}
-                                                    {(tp.poi.translated_description || tp.poi.description).length > 150 ? '...' : ''}
-                                                </div>
-                                            </Popup>
-                                        </Marker>
-                                    );
-                                })}
-
-                                {/* Geofence circles */}
-                                {orderedPOIs.map((tp) => (
-                                    <Circle
-                                        key={`gf-${tp.poi.id}`}
-                                        center={[tp.poi.latitude, tp.poi.longitude]}
-                                        radius={tp.poi.geofence_radius}
-                                        pathOptions={{ color: '#ff6a00', fillColor: '#ff6a00', fillOpacity: 0.06, weight: 1, dashArray: '4 4' }}
-                                    />
-                                ))}
-
-                                {/* User location */}
-                                {position && (
-                                    <Circle
-                                        center={[position.lat, position.lng]}
-                                        radius={12}
-                                        pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.4, weight: 2 }}
-                                    />
-                                )}
-                            </MapContainer>
-                        </div>
-                    ) : !showMap ? (
-                        /* Mini icon map placeholder */
-                        <div className="relative w-full h-44 rounded-2xl overflow-hidden mb-6 bg-gradient-to-br from-slate-100 to-slate-50 border border-slate-200/60 shadow-inner">
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="material-symbols-outlined text-slate-200 text-6xl animate-float">map</span>
-                            </div>
-                            <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 400 200">
-                                <path d="M60,140 Q150,100 200,160 T340,70" fill="none" stroke="#ff6a00" strokeDasharray="8 4" strokeLinecap="round" strokeWidth="3" opacity="0.7" />
-                                {orderedPOIs.map((_, i) => {
-                                    const cx = 60 + (280 / Math.max(orderedPOIs.length - 1, 1)) * i;
-                                    const cy = i === 0 ? 140 : i === orderedPOIs.length - 1 ? 70 : 160;
-                                    return <circle key={i} cx={cx} cy={cy} fill={i < currentPOIIndex ? '#94a3b8' : '#ff6a00'} r={i === currentPOIIndex ? 8 : 6} stroke="white" strokeWidth="2" className={i === currentPOIIndex ? 'animate-pulse' : ''} />;
-                                })}
-                            </svg>
-                        </div>
-                    ) : null}
-
-                    {/* POI Timeline */}
-                    <div>
-                        {orderedPOIs.map((tp, index) => {
-                            const status = getPOIStatus(index, currentPOIIndex);
-                            const distToPOI = position ? Math.round(haversineDistance(position.lat, position.lng, tp.poi.latitude, tp.poi.longitude)) : null;
-                            return (
-                                <div
-                                    key={tp.poi.id}
-                                    className={`ml-3 pl-6 relative animate-stagger-item ${status === 'upcoming' ? 'border-l-2 border-dashed border-slate-200'
-                                        : status === 'completed' ? 'border-l-2 border-slate-300'
-                                            : 'border-l-2 border-primary'
-                                        }`}
-                                    style={staggerStyle(index)}
-                                >
-                                    <div className={`absolute -left-[9px] top-0 size-4 rounded-full border-[3px] ${status === 'completed' ? 'bg-slate-300 border-background-light'
-                                        : status === 'current' ? 'bg-primary border-background-light animate-pulse-glow'
-                                            : 'bg-slate-200 border-background-light'
-                                        }`} />
-
-                                    {status === 'current' ? (
-                                        <div className="bg-white rounded-xl p-4 shadow-sm border border-primary\/20 mb-4 animate-fade-slide-left">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h4 className="text-slate-900 font-bold text-sm">
-                                                    {index + 1}. {tp.poi.translated_name || tp.poi.name}
-                                                </h4>
-                                                <span className="material-symbols-outlined text-primary text-lg">expand_less</span>
-                                            </div>
-                                            <p className="text-slate-500 text-xs mb-3 leading-relaxed">
-                                                {tp.poi.translated_description || tp.poi.description || t('tour.defaultDescription')}
-                                            </p>
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="px-2.5 py-1 bg-primary\/10 text-primary text-[10px] font-bold rounded-full">
-                                                        {tp.poi.category === 'food' ? t('tour.categoryFood') : t('tour.categoryHistorical')}
-                                                    </span>
-                                                    <span className="text-[10px] text-primary font-medium flex items-center gap-0.5 bg-primary\/5 px-2 py-1 rounded-full border border-primary\/10">
-                                                        <span className="material-symbols-outlined text-[12px]">headphones</span>
-                                                        {estimateTTSDuration(tp.poi.description)}
-                                                    </span>
-                                                </div>
-                                                {distToPOI !== null && (
-                                                    <span className="text-[10px] text-slate-400 font-medium flex items-center gap-0.5">
-                                                        <span className="material-symbols-outlined text-[10px]">location_on</span>
-                                                        {distToPOI}m
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center justify-between pb-5">
-                                            <div className="flex flex-col">
-                                                <h4 className={`font-semibold text-sm ${status === 'completed' ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
-                                                    {index + 1}. {tp.poi.translated_name || tp.poi.name}
-                                                </h4>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <span className="flex items-center gap-0.5 text-[10px] text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">
-                                                        <span className="material-symbols-outlined text-[10px]">headphones</span>
-                                                        {estimateTTSDuration(tp.poi.description)}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                {distToPOI !== null && status === 'upcoming' && (
-                                                    <span className="text-[10px] text-slate-300 font-medium">{distToPOI}m</span>
-                                                )}
-                                                <span className="material-symbols-outlined text-slate-300 text-lg">
-                                                    {status === 'completed' ? 'check_circle' : 'expand_more'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
-
-            {/* Overview Tab */}
-            {activeTab === 'overview' && (
-                <div className="px-4 py-4 animate-fade-slide-up">
-                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-                        <h3 className="text-lg font-bold text-slate-900 mb-2">
-                            {selectedTour.translated_name?.[i18n.language] || selectedTour.name}
-                        </h3>
-                        <p className="text-slate-500 text-sm leading-relaxed">
-                            {selectedTour.translated_description?.[i18n.language] || selectedTour.description}
-                        </p>
-                        <div className="flex gap-4 mt-4">
-                            <div className="flex items-center gap-1.5 text-sm text-slate-500">
-                                <span className="material-symbols-outlined text-primary text-base" style={{ fontVariationSettings: "'FILL' 1" }}>schedule</span>
-                                {selectedTour.estimated_duration_min || '—'} {t('common.minutes')}
-                            </div>
-                            <div className="flex items-center gap-1.5 text-sm text-slate-500">
-                                <span className="material-symbols-outlined text-primary text-base" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
-                                {selectedTour.pois.length} {t('common.points')}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Reviews Tab */}
-            {activeTab === 'reviews' && (
-                <div className="px-4 py-4 animate-fade-slide-up pb-20">
-                    {/* Rating Stats Summary */}
-                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex gap-6 mb-6">
-                        <div className="flex flex-col items-center justify-center min-w-[80px]">
-                            <span className="text-4xl font-bold tracking-tighter text-slate-900">{stats.average.toFixed(1)}</span>
-                            <div className="flex items-center gap-0.5 my-1">
-                                {[1, 2, 3, 4, 5].map(star => (
-                                    <span key={star} className={`text-[12px] material-symbols-outlined ${star <= Math.round(stats.average) ? 'text-amber-400' : 'text-slate-200'}`} style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                                ))}
-                            </div>
-                            <span className="text-xs font-medium text-slate-400">{stats.total} {t('tour.reviewsLabel', { defaultValue: 'đánh giá' })}</span>
-                        </div>
-
-                        <div className="flex-1 flex flex-col gap-1.5 pt-1">
-                            {[5, 4, 3, 2, 1].map(stars => {
-                                const count = stats.distribution[stars as 1 | 2 | 3 | 4 | 5];
-                                const percent = stats.total > 0 ? (count / stats.total) * 100 : 0;
-                                return (
-                                    <div key={stars} className="flex items-center gap-2 text-xs">
-                                        <span className="w-2 font-medium text-slate-500">{stars}</span>
-                                        <div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden">
-                                            <div className="h-full bg-amber-400 rounded-full transition-all duration-700" style={{ width: `${percent}%` }} />
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {/* Action */}
-                    <div className="flex items-center justify-between mb-4 px-1">
-                        <h3 className="text-sm font-bold text-slate-900">{t('review.reviewCount', { count: stats.total, defaultValue: 'Bài đánh giá' })} ({stats.total})</h3>
-                        <button
-                            onClick={() => setShowReviewForm(true)}
-                            className="text-primary text-xs font-bold px-4 py-2 bg-primary/10 rounded-full tap-scale"
-                        >
-                            {t('review.writeReview', { defaultValue: 'Viết đánh giá' })}
-                        </button>
-                    </div>
-
-                    {/* Review List */}
-                    {reviews.length > 0 ? (
-                        <div className="flex flex-col gap-3">
-                            {reviews.map((r, i) => (
-                                <div key={r.id} style={staggerStyle(i)} className="animate-stagger-item">
-                                    <ReviewCard review={r} />
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="py-10 text-center text-slate-300 animate-fade-in">
-                            <span className="material-symbols-outlined text-6xl block mb-3 animate-float drop-shadow-sm">rate_review</span>
-                            <p className="text-sm font-medium text-slate-500">{t('tour.noReviews')}</p>
-                            <p className="text-xs text-slate-400 mt-1">{t('tour.beFirstReview')}</p>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Bottom CTA */}
-            <div className="sticky bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background-light via-background-light/95 to-transparent">
-                {selectedTour.is_premium && !selectedTour.is_unlocked ? (
-                    <button
-                        onClick={() => setShowPremiumCheckout(true)}
-                        className="w-full flex items-center justify-center gap-2.5 rounded-2xl h-14 text-white text-base font-bold shadow-xl tap-scale transition-all bg-gradient-to-r from-amber-500 to-orange-500 shadow-amber-500/20"
-                    >
-                        <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>lock</span>
-                        {t('tour.unlockNow')}
-                        {selectedTour.premium_price ? (
-                            <span className="text-sm opacity-80">— {selectedTour.premium_price.toLocaleString('vi-VN')}₫</span>
-                        ) : null}
-                    </button>
-                ) : (
-                    <button
-                        onClick={() => { setTourStarted(!tourStarted); if (!tourStarted) setShowMap(true); }}
-                        className={`w-full flex items-center justify-center gap-2.5 rounded-2xl h-14 text-white text-base font-bold shadow-xl tap-scale transition-all ${tourStarted
-                            ? 'bg-slate-800 shadow-slate-800/20'
-                            : 'bg-primary shadow-primary/30 animate-pulse-glow'
-                            }`}
-                    >
-                        <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-                            {tourStarted ? 'stop_circle' : 'play_circle'}
-                        </span>
-                        {tourStarted ? t('tour.endTour') : t('tour.startTour')}
-                    </button>
-                )}
+            <div className="tour-options">
+              {filteredTours.map((tour) => (
+                <button className="tour-option" key={tour.id} onClick={() => selectTour(tour)}>
+                  <span className="tour-option-no">{String(tours.indexOf(tour) + 1).padStart(2, '0')}</span>
+                  <span><strong>{titleOf(tour)}</strong><small>{tour.estimated_duration_min || 45} phút · {tour.pois.length} trạm</small></span>
+                  <span className={`sketch-chip ${tour.is_premium ? 'sketch-chip-tertiary' : 'sketch-chip-secondary'}`}>{tour.is_premium ? 'Premium' : 'Free'}</span>
+                </button>
+              ))}
             </div>
+          </div>
+        </div>
+      )}
+      {showMap && (
+        <div className="scrim is-visible" role="dialog" aria-modal="true" style={{ zIndex: 9999 }}>
+          <div className="modal">
+            <div className="modal-head">
+              <h2>Bản đồ hành trình</h2>
+              <button className="sketch-icon-button" onClick={() => setShowMap(false)} aria-label="Đóng">×</button>
+            </div>
+            <div style={{ height: '60vh', position: 'relative' }}>
 
-            {/* Narration Bottom Sheet Overlay */}
-            {narrationData && (
-                <div className="absolute inset-0 z-30 flex flex-col justify-end bg-black/20 backdrop-blur-sm">
-                    <NarrationBottomSheet
-                        key={narrationData.poi.id}
-                        poi={narrationData.poi}
-                        media={narrationData.media}
-                        partners={narrationData.partners}
-                        onClose={handleNarrationClose}
-                    />
-                </div>
-            )}
+              <div style={{ position: 'absolute', inset: 0 }}>
+                <MapContainer preferCanvas={true} center={routePoints[0] || [10.7579, 106.7031]} zoom={15} zoomControl={false} style={{ height: '100%', width: '100%' }}>
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
+                  <FitBounds points={routePoints} />
+                  {tourStarted && <MapClickInterceptor onMapClick={setMockLocation} />}
+                  <Polyline positions={routePoints} pathOptions={{ color: '#006D38', weight: 4, dashArray: '8 4' }} />
+                  {orderedPOIs.map((item, index) => <Marker key={item.poi.id} position={[item.poi.latitude, item.poi.longitude]} icon={createMarkerIcon(index)} eventHandlers={{ click: () => startNarration(item.poi) }}><Popup>{poiTitle(item.poi)}</Popup></Marker>)}
+                  {orderedPOIs.map((item) => <Circle key={`circle-${item.poi.id}`} center={[item.poi.latitude, item.poi.longitude]} radius={item.poi.geofence_radius} pathOptions={{ color: '#006D38', fillColor: '#006D38', fillOpacity: .06, weight: 1, dashArray: '4 4' }} />)}
+                </MapContainer>
+              </div>
 
-            {/* Review Form Modal */}
-            {/* Premium Checkout Modal */}
-            {showPremiumCheckout && selectedTour.is_premium && (
-                <PremiumTourCheckout
-                    tour={selectedTour}
-                    onClose={() => setShowPremiumCheckout(false)}
-                    onSuccess={() => {
-                        // Refresh tour list to update is_unlocked
-                        getTours()
-                            .then((data) => {
-                                setTours(data);
-                                const refreshed = data.find(t => t.id === selectedTour.id);
-                                if (refreshed) setSelectedTour(refreshed);
-                            })
-                            .catch(() => {});
-                    }}
-                />
-            )}
+            </div>
+          </div>
+        </div>
+      )}
+      {narrationData && (
+        <div className="scrim is-visible" style={{ zIndex: 9999 }}>
+          <NarrationBottomSheet key={narrationData.poi.id} poi={narrationData.poi} media={narrationData.media} onClose={closeNarrationSheet} />
+        </div>
+      )}
+      {showPremiumCheckout && selectedTour.is_premium && (
+        <PremiumTourCheckout tour={selectedTour} onClose={() => setShowPremiumCheckout(false)} onSuccess={() => { getTours().then((data) => { setTours(data); setSelectedTour(data.find((tour) => tour.id === selectedTour.id) || selectedTour); }).catch(() => undefined); }} />
+      )}
+      {showReviewForm && (
+        <ReviewForm onClose={() => setShowReviewForm(false)} onSubmit={async (rating, comment) => { await addReview({ tour: Number(selectedTour.id), rating, comment }); setShowReviewForm(false); }} />
+      )}
+    </SketchFrame>
+  );
 
-            {showReviewForm && (
-                <ReviewForm
-                    onClose={() => setShowReviewForm(false)}
-                    onSubmit={async (rating, comment) => {
-                        await addReview({
-                            tour: Number(selectedTour.id),
-                            rating,
-                            comment,
-                        });
-                        // Xóa cờ đã review để hiện popup cảm ơn (tùy chọn UI sau này)
-                    }}
-                />
-            )}
-        </AppLayout>
-    );
 }

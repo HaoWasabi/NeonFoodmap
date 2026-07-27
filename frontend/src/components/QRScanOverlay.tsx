@@ -230,21 +230,19 @@ export default function QRScanOverlay({ onClose, onScanSuccess }: QRScanOverlayP
 
             {/* Top nav */}
             <div className="relative z-20 w-full flex items-center justify-between p-6">
-                <button onClick={onClose} className="flex items-center gap-2">
-                    <div className="flex size-10 items-center justify-center rounded-full bg-black/40 backdrop-blur-md">
-                        <span className="material-symbols-outlined text-white">arrow_back</span>
-                    </div>
-                    <span className="text-white font-semibold text-lg drop-shadow-md">{t('common.cancel')}</span>
+                <button onClick={onClose} className="btn btn-ghost text-white border-white/20 hover:border-primary flex items-center gap-2">
+                    <span className="material-symbols-outlined">arrow_back</span>
+                    <span className="t-body font-bold">{t('common.cancel')}</span>
                 </button>
             </div>
 
             {/* Scan frame */}
             <div className="relative z-10 flex flex-col items-center justify-center flex-1 w-full">
                 <div className="relative size-64 sm:size-72">
-                    <div className="absolute -top-1 -left-1 size-10 border-t-4 border-l-4 border-primary rounded-tl-2xl" />
-                    <div className="absolute -top-1 -right-1 size-10 border-t-4 border-r-4 border-primary rounded-tr-2xl" />
-                    <div className="absolute -bottom-1 -left-1 size-10 border-b-4 border-l-4 border-primary rounded-bl-2xl" />
-                    <div className="absolute -bottom-1 -right-1 size-10 border-b-4 border-r-4 border-primary rounded-br-2xl" />
+                    <div className="absolute -top-1 -left-1 size-10 border-t-4 border-l-4 border-primary rounded-none" />
+                    <div className="absolute -top-1 -right-1 size-10 border-t-4 border-r-4 border-primary rounded-none" />
+                    <div className="absolute -bottom-1 -left-1 size-10 border-b-4 border-l-4 border-primary rounded-none" />
+                    <div className="absolute -bottom-1 -right-1 size-10 border-b-4 border-r-4 border-primary rounded-none" />
 
                     {!scanOk && !cameraError && (
                         <div className="absolute left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent shadow-[0_0_12px_rgba(255,106,0,.8)] animate-scan-line" />
@@ -258,13 +256,13 @@ export default function QRScanOverlay({ onClose, onScanSuccess }: QRScanOverlayP
                 </div>
 
                 <div className="mt-8 px-8 text-center max-w-xs">
-                    <h3 className="text-white text-lg font-bold drop-shadow-lg">
+                    <h3 className="text-white t-title text-xl drop-shadow-lg">
                         {scanOk ? 'Đang xử lý...' : t('qr.scanTitle')}
                     </h3>
-                    <p className="text-white/70 text-sm mt-2 leading-relaxed">{t('qr.scanDescription')}</p>
+                    <p className="text-white/70 t-body mt-2 leading-relaxed">{t('qr.scanDescription')}</p>
 
                     {cameraError && !scanOk && (
-                        <p className="mt-4 text-amber-300 text-xs font-medium bg-amber-500/20 border border-amber-400/30 rounded-xl px-4 py-2">
+                        <p className="mt-4 text-amber-300 t-mono text-xs bg-amber-500/20 border border-amber-400/30 rounded-none px-4 py-2">
                             📵 Camera không khả dụng (cần HTTPS)
                         </p>
                     )}
@@ -277,17 +275,15 @@ export default function QRScanOverlay({ onClose, onScanSuccess }: QRScanOverlayP
                     <div className="flex flex-col items-center gap-2">
                         <button 
                             onClick={() => fileInputRef.current?.click()}
-                            className="flex size-14 items-center justify-center rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white active:bg-primary transition-colors"
+                            className="btn-icon bg-black/40 backdrop-blur-xl border border-white/30 text-white active:bg-primary transition-colors flex items-center justify-center"
                         >
-                            <span className="material-symbols-outlined text-3xl">image</span>
+                            <span className="material-symbols-outlined text-2xl">image</span>
                         </button>
-                        <span className="text-xs font-medium text-white/80 uppercase tracking-widest">{t('qr.gallery')}</span>
+                        <span className="t-label text-white/80">{t('qr.gallery')}</span>
                     </div>
 
-                    <div className="flex size-20 items-center justify-center rounded-full border-4 border-primary p-1">
-                        <div className="size-full rounded-full bg-white flex items-center justify-center">
-                            <span className="material-symbols-outlined text-primary text-4xl">qr_code_scanner</span>
-                        </div>
+                    <div className="flex size-14 items-center justify-center border-2 border-primary bg-white text-primary rounded-none">
+                        <span className="material-symbols-outlined text-3xl">qr_code_scanner</span>
                     </div>
                 </div>
                 <div className="w-32 h-1.5 bg-white/20 rounded-full" />
