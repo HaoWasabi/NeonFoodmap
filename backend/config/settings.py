@@ -215,6 +215,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5174",
     "http://127.0.0.1:5174",
     "https://buocchansoida.netlify.app",
+    # ALB endpoints
+    "http://alb-neonfoodmap-406336237.ap-southeast-1.elb.amazonaws.com",
+    "https://alb-neonfoodmap-406336237.ap-southeast-1.elb.amazonaws.com",
 ]
 
 # Comma-separated, e.g. http://YOUR_EC2_IP:3000 (Docker frontend mapped port)
@@ -236,6 +239,9 @@ CSRF_TRUSTED_ORIGINS = [
     "https://buocchansoida.netlify.app",
     "https://*.ngrok-free.app",
     "https://*.ngrok-free.dev",
+    # ALB endpoints (HTTP cho testing, HTTPS cho production)
+    "http://alb-neonfoodmap-406336237.ap-southeast-1.elb.amazonaws.com",
+    "https://alb-neonfoodmap-406336237.ap-southeast-1.elb.amazonaws.com",
 ]
 
 _csrf_extra = os.getenv("CSRF_TRUSTED_ORIGINS_EXTRA", "")
