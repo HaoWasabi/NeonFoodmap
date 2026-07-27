@@ -115,7 +115,6 @@ export default function OnboardingFlow({ open, onComplete }: OnboardingFlowProps
 
     if (!open) return null;
 
-    const showWelcome = () => setStage('welcome');
     const requestPermission = async (kind: 'location' | 'notification') => {
         if (kind === 'location' && 'geolocation' in navigator) {
             await new Promise<void>((resolve) => navigator.geolocation.getCurrentPosition(() => resolve(), () => resolve(), { timeout: 5000 }));
@@ -134,7 +133,7 @@ export default function OnboardingFlow({ open, onComplete }: OnboardingFlowProps
     return (
         <main className="foodmap-onboarding" aria-label="Luồng onboarding NeonFoodmap">
             <section className={`foodmap-onboard-stage foodmap-splash${stage === 'splash' ? ' is-visible' : ''}`} aria-hidden={stage !== 'splash'}>
-                <button className="foodmap-btn foodmap-btn-secondary foodmap-skip-splash" type="button" onClick={showWelcome}>Bỏ qua</button>
+
                 <div className="foodmap-splash-inner">
                     <svg className="foodmap-splash-wordmark" viewBox="0 0 900 220" role="img" aria-label="NeonFoodmap"><text x="450" y="154" textAnchor="middle">NeonFoodmap</text></svg>
                     <p className="foodmap-body">Thuyết minh di sản &amp; ẩm thực phố</p>
@@ -149,9 +148,7 @@ export default function OnboardingFlow({ open, onComplete }: OnboardingFlowProps
                     <div className="foodmap-story-track" style={{ transform: `translate3d(${storyIndex * -(100 / stories.length)}%, 0, 0)` }}>
                         {stories.map((item, index) => <article className={`foodmap-story-scene${index === storyIndex ? ' is-active' : ''}`} key={item.index}><StoryArtwork index={index} /><div className="foodmap-scene-scrim" /><div className="foodmap-visual-copy"><div className="foodmap-visual-index foodmap-label"><span>{item.index}</span><span>{item.location}</span></div><h2 className="foodmap-display">{item.title}</h2><div className="foodmap-visual-caption"><span className="foodmap-mono">{item.time}</span><p className="foodmap-body">{item.copy}</p></div></div></article>)}
                     </div>
-                    <div className="foodmap-story-rail" role="tablist" aria-label="Chọn chương onboarding">
-                        {stories.map((item, index) => <button className={`foodmap-story-step${index === storyIndex ? ' is-active' : ''}`} type="button" role="tab" aria-selected={index === storyIndex} key={item.stop} onClick={() => setStoryIndex(index)}><span className="foodmap-story-progress" /><b>0{index + 1}</b><span>{item.stop}</span></button>)}
-                    </div>
+
                 </div>
 
                 <div className="foodmap-welcome-panel">
