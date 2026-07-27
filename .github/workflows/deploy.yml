@@ -217,6 +217,7 @@ jobs:
             ${{ env.ECR_REGISTRY }}/neonfoodmap-frontend:${{ steps.vars.outputs.sha_tag }}
           build-args: |
             VITE_API_URL=${{ vars.VITE_API_URL }}
+            VITE_PAYPAL_CLIENT_ID=${{ vars.VITE_PAYPAL_CLIENT_ID }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
