@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PayPalButtons } from '@paypal/react-paypal-js';
+import { useTranslation } from 'react-i18next';
 import AppLayout from '../components/AppLayout';
 import { getApiErrorMessage, getInvoiceById, getInvoices, paypalCaptureOrder, paypalCreateOrder } from '../services/api';
 import type { Invoice } from '../services/api';
 
 export default function InvoiceDetail() {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [params, setParams] = useSearchParams();
     const invoiceId = params.get('invoiceId') || '';
@@ -65,12 +67,12 @@ export default function InvoiceDetail() {
     };
 
     return (
-        <AppLayout title="Hóa đơn" showBack backPath="/settings">
+        <AppLayout title={t('settings.invoices')} showBack backPath="/settings">
             <div className="mx-4 mt-4">
                 {/* Danh sách hóa đơn */}
                 {invoices.length > 0 && (
                     <div className="mb-4">
-                        <h3 className="text-sm font-semibold text-slate-700 mb-2">Danh sách hóa đơn</h3>
+                        <h3 className="text-sm font-semibold text-slate-700 mb-2">{t('settings.invoices')}</h3>
                         <div className="space-y-2">
                             {invoices.map((inv) => (
                                 <div
@@ -112,7 +114,7 @@ export default function InvoiceDetail() {
                         <div className="space-y-4">
                             <div className="flex items-start justify-between gap-3">
                                 <div>
-                                    <p className="text-xs text-slate-400 font-semibold">Lý do thanh toán</p>
+                                    <p className="text-xs text-slate-400 font-semibold">{t('invoice.item')}</p>
                                     <p className="text-sm font-bold text-slate-900 mt-1">{invoice.reason}</p>
                                 </div>
                                 <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${statusBadge(invoice.status)}`}
@@ -122,7 +124,7 @@ export default function InvoiceDetail() {
                             </div>
 
                             <div>
-                                <p className="text-xs text-slate-400 font-semibold">Số tiền</p>
+                                <p className="text-xs text-slate-400 font-semibold">{t('payment.amount')}</p>
                                 <p className="text-2xl font-black text-slate-900 mt-1">
                                     {invoice.amount.toLocaleString('vi-VN')}₫
                                 </p>
@@ -130,11 +132,11 @@ export default function InvoiceDetail() {
 
                             <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
                                 <div className="flex justify-between text-xs">
-                                    <span className="text-slate-500">Mã giao dịch</span>
+                                    <span className="text-slate-500">{t('payment.orderCode')}</span>
                                     <span className="text-slate-700 font-mono">{invoice.transaction_code || '—'}</span>
                                 </div>
                                 <div className="flex justify-between text-xs mt-2">
-                                    <span className="text-slate-500">Thanh toán lúc</span>
+                                    <span className="text-slate-500">{t('invoice.date')}</span>
                                     <span className="text-slate-700">{invoice.paid_at ? new Date(invoice.paid_at).toLocaleString('vi-VN') : '—'}</span>
                                 </div>
                             </div>
@@ -144,7 +146,7 @@ export default function InvoiceDetail() {
                                     disabled
                                     className="w-full py-4 rounded-2xl font-bold text-base bg-slate-200 text-slate-500"
                                 >
-                                    Đã thanh toán
+                                    {t('invoice.paid')}
                                 </button>
                             ) : (
                                 <div className="w-full">
@@ -174,7 +176,7 @@ export default function InvoiceDetail() {
                                             }}
                                             onError={(err: unknown) => {
                                                 console.error(err);
-                                                setError('Không thể khởi tạo PayPal. Vui lòng thử lại.');
+                                                setError(t('tour.paypalError'));
                                             }}
                                         />
                                     </div>

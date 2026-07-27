@@ -5,7 +5,7 @@ import { defineConfig, devices } from '@playwright/test';
  * - Local: `PLAYWRIGHT_BASE_URL=http://localhost:4173` after `npm run build && npm run preview`
  * - CI: set in workflow (preview server or staging URL)
  */
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:4173';
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4173';
 
 export default defineConfig({
   testDir: './e2e',
@@ -35,7 +35,7 @@ export default defineConfig({
     ? undefined
     : {
         command: 'npm run preview -- --port 4173 --strictPort',
-        url: 'http://localhost:4173',
+        url: 'http://127.0.0.1:4173',
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
       },

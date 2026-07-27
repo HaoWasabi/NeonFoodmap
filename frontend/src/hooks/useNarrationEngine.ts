@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { POI, Media, Partner, Language, VoiceRegion } from '../types';
 import { startNarration, endNarration, getPOIMedia, getPOIPartners, selectBestMedia } from '../services/api';
 
@@ -46,6 +46,7 @@ export function useNarrationEngine({
     const isPlayingRef = useRef(false);
     const currentLogIdRef = useRef<string | null>(null);
     const currentPoiRef = useRef<POI | null>(null);
+    const narrationRequestIdRef = useRef(0);
 
 
 
@@ -74,6 +75,8 @@ export function useNarrationEngine({
                 }
             }
 
+            const requestId = ++narrationRequestIdRef.current;
+
             console.log(LOG_PREFIX, 'Triggering narration for:', poi.name, 'Type:', triggerType);
 
             // 3. Mark as playing
@@ -100,6 +103,11 @@ export function useNarrationEngine({
                 console.warn(LOG_PREFIX, 'Backend log failed (offline?)', err);
                 currentLogIdRef.current = null;
             }
+
+            if (requestId !== narrationRequestIdRef.current || !isPlayingRef.current || currentPoiRef.current?.id !== poi.id) {
+                return;
+            }
+
             saveLocalLog(logEntry);
 
             // 4. Record timestamp for anti-spam (LOCAL ONLY)
@@ -110,6 +118,10 @@ export function useNarrationEngine({
                 getPOIMedia(poi.id, language, voiceRegion),
                 getPOIPartners(poi.id).catch(() => [] as Partner[]),
             ]);
+
+            if (requestId !== narrationRequestIdRef.current || !isPlayingRef.current || currentPoiRef.current?.id !== poi.id) {
+                return;
+            }
 
             let media = fetchedMedia;
 
@@ -129,18 +141,32 @@ export function useNarrationEngine({
     /**
      * Gọi khi kết thúc phát (audio ended hoặc user bấm Stop).
      */
-    const finishNarration = useCallback(async (duration: number): Promise<void> => {
+    const cancelNarration = useCallback(() => {
+        narrationRequestIdRef.current += 1;
         isPlayingRef.current = false;
         currentPoiRef.current = null;
-        if (currentLogIdRef.current) {
+    }, []);
+
+    const finishNarration = useCallback(async (duration: number): Promise<void> => {
+        cancelNarration();
+        const logId = currentLogIdRef.current;
+        currentLogIdRef.current = null;
+        if (logId) {
             try {
-                await endNarration(currentLogIdRef.current, duration);
+                await endNarration(logId, duration);
             } catch {
                 // Offline: sync sau
             }
-            currentLogIdRef.current = null;
         }
+    }, [cancelNarration]);
+
+    useEffect(() => {
+        return () => {
+            narrationRequestIdRef.current += 1;
+            isPlayingRef.current = false;
+            currentPoiRef.current = null;
+        };
     }, []);
 
-    return { triggerNarration, finishNarration };
+    return { triggerNarration, finishNarration, cancelNarration };
 }

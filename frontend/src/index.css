@@ -1,17 +1,17 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Caveat:wght@600;700&family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #ff6a00;
-  --color-primary-dark: #e05e00;
-  --color-background-light: #f8f7f5;
-  --color-background-dark: #23170f;
-  --font-display: "Plus Jakarta Sans", sans-serif;
-  --font-family-display: "Plus Jakarta Sans", sans-serif;
-  --radius-DEFAULT: 0.25rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
+  --color-primary: #006d38;
+  --color-primary-dark: #004d28;
+  --color-background-light: #f9f9fa;
+  --color-background-dark: #191c1d;
+  --font-display: "Hanken Grotesk", sans-serif;
+  --font-family-display: "Hanken Grotesk", sans-serif;
+  --radius-DEFAULT: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
   --radius-full: 9999px;
 }
 
@@ -25,9 +25,9 @@
   }
 
   body {
-    font-family: var(--font-family-display);
+    font-family: 'Hanken Grotesk', sans-serif;
     background-color: var(--color-background-light);
-    color: #0f172a;
+    color: #191c1d;
     min-height: 100dvh;
     position: relative;
     overflow-x: hidden;

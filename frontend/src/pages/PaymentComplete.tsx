@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import AppLayout from '../components/AppLayout';
 import { getApiErrorMessage, getInvoiceById } from '../services/api';
 import type { Invoice } from '../services/api';
 
 export default function PaymentComplete() {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [params] = useSearchParams();
 
@@ -41,7 +43,7 @@ export default function PaymentComplete() {
     const isSuccess = status === 'success' && code === '00';
 
     return (
-        <AppLayout title="Thanh toán hoàn tất" showBack={false} hideNav>
+        <AppLayout title={t('payment.completeTitle')} showBack={false} hideNav>
             <div className="mx-4 mt-6">
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
                     <div className="flex items-start gap-3">
@@ -52,32 +54,32 @@ export default function PaymentComplete() {
                         </div>
                         <div className="flex-1">
                             <h2 className="text-base font-black text-slate-900">
-                                {isSuccess ? 'Thanh toán thành công' : 'Thanh toán chưa hoàn tất'}
+                                {isSuccess ? t('payment.completeTitle') : t('payment.failedTitle')}
                             </h2>
                             <p className="text-xs text-slate-500 mt-1">
                                 {isSuccess
-                                    ? 'Cảm ơn bạn! Giao dịch đã được ghi nhận.'
-                                    : 'Bạn có thể quay lại hóa đơn để thử thanh toán lại.'}
+                                    ? t('payment.completeDesc')
+                                    : t('payment.failedDesc')}
                             </p>
                         </div>
                     </div>
 
                     <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-2">
                         <div className="flex justify-between text-xs">
-                            <span className="text-slate-500">Mã đơn</span>
+                            <span className="text-slate-500">{t('payment.orderCode')}</span>
                             <span className="text-slate-700 font-mono">{orderId || '—'}</span>
                         </div>
                         <div className="flex justify-between text-xs">
-                            <span className="text-slate-500">Mã phản hồi</span>
+                            <span className="text-slate-500">{t('payment.responseCode')}</span>
                             <span className="text-slate-700 font-mono">{code || '—'}</span>
                         </div>
                         <div className="flex justify-between text-xs">
-                            <span className="text-slate-500">Trạng thái</span>
+                            <span className="text-slate-500">{t('payment.status')}</span>
                             <span className="text-slate-700 font-semibold">{status || '—'}</span>
                         </div>
                         {invoice && (
                             <div className="flex justify-between text-xs">
-                                <span className="text-slate-500">Số tiền</span>
+                                <span className="text-slate-500">{t('payment.amount')}</span>
                                 <span className="text-slate-900 font-black">{invoice.amount.toLocaleString('vi-VN')}₫</span>
                             </div>
                         )}
@@ -94,13 +96,13 @@ export default function PaymentComplete() {
                             onClick={() => navigate('/settings', { replace: true })}
                             className="w-full rounded-2xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-700 tap-scale transition hover:bg-slate-50"
                         >
-                            Về Settings
+                            {t('settings.title')}
                         </button>
                         <button
                             onClick={() => navigate(invoiceId ? `/invoice?invoiceId=${invoiceId}` : '/invoice', { replace: true })}
                             className="w-full rounded-2xl bg-primary py-3 text-sm font-bold text-white shadow-primary/20 shadow-lg tap-scale transition hover:shadow-xl"
                         >
-                            Xem hóa đơn
+                            {t('payment.viewInvoice')}
                         </button>
                     </div>
                 </div>
