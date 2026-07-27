@@ -718,7 +718,7 @@ export const startNarration = async (
  * Cập nhật số giây thực tế người dùng đã nghe.
  */
 export const endNarration = async (logId: string | number, duration: number): Promise<void> => {
-    await apiClient.patch(`/analytics/narration/${logId}/end/`, { duration });
+    await apiClient.patch(`/analytics/narration/${logId}/end/`, { duration: Math.round(duration) });
 };
 
 /**

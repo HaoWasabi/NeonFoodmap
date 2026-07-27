@@ -42,7 +42,7 @@ export default function TourDetail() {
 
     if (loading) {
         return (
-            <AppLayout title={t('tour.title')}>
+            <AppLayout title={t('tour.title')} hideTopbar={true}>
                 <div className="px-4 py-8 text-sm text-slate-500">{t('common.loading')}</div>
             </AppLayout>
         );
@@ -50,7 +50,7 @@ export default function TourDetail() {
 
     if (!tour) {
         return (
-            <AppLayout title={t('tour.title')}>
+            <AppLayout title={t('tour.title')} hideTopbar={true}>
                 <div className="px-4 py-10 text-center">
                     <p className="text-slate-600 font-semibold">{t('tour.notFound')}</p>
                     <button
@@ -71,6 +71,7 @@ export default function TourDetail() {
     return (
         <AppLayout
             title={translatedTourName}
+            hideTopbar={true}
             headerAction={
                 <button
                     onClick={() => navigate('/tours')}
@@ -93,7 +94,7 @@ export default function TourDetail() {
                                 <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                                     {tour.is_unlocked ? 'verified' : 'workspace_premium'}
                                 </span>
-                                {tour.is_unlocked ? t('tour.unlocked', { defaultValue: 'Đã mở' }) : 'Premium'}
+                                {tour.is_unlocked ? t('tour.unlocked') : t('tour.premium')}
                             </span>
                         )}
                     </div>

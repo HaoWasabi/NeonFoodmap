@@ -1,24 +1,28 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 
 const globalAudio = typeof window !== 'undefined' ? new Audio() : null;
+export let lastUnlockTime = 0;
 
 export function unlockAudioAndTTS() {
     if (typeof window !== 'undefined') {
-        // Unlock TTS
+        // Unlock TTS safely without queuing dummy empty utterances that lock Chrome SpeechSynthesis
         if ('speechSynthesis' in window) {
-            // Warmup voices
             window.speechSynthesis.getVoices();
-            const utterance = new SpeechSynthesisUtterance('');
-            utterance.volume = 0;
-            window.speechSynthesis.speak(utterance);
+            if (window.speechSynthesis.paused) {
+                window.speechSynthesis.resume();
+            }
+            lastUnlockTime = Date.now();
         }
-        // Unlock HTML5 Audio
-        if (globalAudio) {
-            globalAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
-            globalAudio.volume = 0;
-            globalAudio.play().then(() => {
-                globalAudio.pause();
-                globalAudio.volume = 1;
+        // Unlock HTML5 Audio with a throwaway element. Never use globalAudio
+        // here: its play() promise may resolve after the real narration has
+        // replaced the source and would then pause the real narration.
+        if (globalAudio && globalAudio.paused) {
+            const probe = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+            probe.volume = 0.01;
+            void probe.play().then(() => {
+                probe.pause();
+                probe.removeAttribute('src');
+                probe.load();
             }).catch(() => { /* ignore */ });
         }
     }
@@ -47,6 +51,7 @@ export function useAudioPlayer({ onEnded, onTimeUpdate }: UseAudioPlayerOptions 
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [playbackRate, setPlaybackRateState] = useState(1);
+    const [isLoading, setIsLoading] = useState(false);
     
     const startTimeRef = useRef<number>(0);
     const currentTimeRef = useRef<number>(0);
@@ -59,6 +64,7 @@ export function useAudioPlayer({ onEnded, onTimeUpdate }: UseAudioPlayerOptions 
     const ttsTextRef = useRef<string>('');
     const ttsLangRef = useRef<string>('vi-VN');
     const ttsTimerRef = useRef<number | null>(null);
+    const ttsStartTimeoutRef = useRef<number | null>(null);
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
     const updateCurrentTime = useCallback((time: number) => {
@@ -85,6 +91,9 @@ export function useAudioPlayer({ onEnded, onTimeUpdate }: UseAudioPlayerOptions 
 
     const load = useCallback(async (url: string) => {
         isTTSRef.current = false;
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+        }
         const audio = getAudio();
         
         // Revoke old blob URL if exists
@@ -128,16 +137,82 @@ export function useAudioPlayer({ onEnded, onTimeUpdate }: UseAudioPlayerOptions 
             return;
         }
 
-        const utterance = new SpeechSynthesisUtterance(remainingText);
-        utterance.lang = ttsLangRef.current;
-        utterance.rate = playbackRateRef.current;
-        utteranceRef.current = utterance; // Giữ ref chống Garbage Collection
+        // Lỗi của Web Speech API: Nếu text quá dài (trên 200-300 ký tự), Chrome Android sẽ ngầm drop không đọc.
+        // Giải pháp: Cắt nhỏ chuỗi thành các câu ngắn và đưa vào queue.
+        const maxChunkLength = 200;
+        const chunks: string[] = [];
+        const sentences = remainingText.match(/[^.!?\n,;]+[.!?\n,;]*/g) || [remainingText];
+        
+        let currentChunk = '';
+        for (const sentence of sentences) {
+            if (currentChunk.length + sentence.length > maxChunkLength) {
+                if (currentChunk) {
+                    chunks.push(currentChunk.trim());
+                    currentChunk = '';
+                }
+                if (sentence.length > maxChunkLength) {
+                    chunks.push(sentence.trim());
+                } else {
+                    currentChunk = sentence.trim();
+                }
+            } else {
+                currentChunk += currentChunk ? ' ' + sentence.trim() : sentence.trim();
+            }
+        }
+        if (currentChunk) chunks.push(currentChunk.trim());
+
+        const voices = window.speechSynthesis.getVoices();
+        const requestedLanguage = ttsLangRef.current.replace('_', '-').toLowerCase();
+        const requestedPrefix = requestedLanguage.split('-')[0];
+        const preferredVoice = voices.find((voice) => {
+            const voiceLanguage = voice.lang.replace('_', '-').toLowerCase();
+            return voiceLanguage === requestedLanguage;
+        }) ?? voices.find((voice) => {
+            const voiceLanguage = voice.lang.replace('_', '-').toLowerCase();
+            return voiceLanguage.startsWith(`${requestedPrefix}-`);
+        });
         
         // Tính lại startTimeRef để interval tiếp tục từ currentTimeRef hiện tại
         startTimeRef.current = Date.now() - (currentTimeRef.current * 1000 / playbackRateRef.current);
         
+        setIsLoading(false);
         updateIsPlaying(true);
-        window.speechSynthesis.speak(utterance);
+        
+        // Fix Chrome TTS bug: cancel() followed immediately by speak() gets stuck
+        if (ttsStartTimeoutRef.current !== null) {
+            window.clearTimeout(ttsStartTimeoutRef.current);
+        }
+        ttsStartTimeoutRef.current = window.setTimeout(() => {
+            ttsStartTimeoutRef.current = null;
+            if (isPlayingRef.current) {
+                window.speechSynthesis.resume(); // Đảm bảo engine không bị kẹt ở trạng thái pause cũ
+                
+                chunks.forEach((chunkText, index) => {
+                    if (!chunkText) return;
+                    const u = new SpeechSynthesisUtterance(chunkText);
+                    u.lang = ttsLangRef.current;
+                    u.rate = playbackRateRef.current;
+                    if (preferredVoice) {
+                        u.voice = preferredVoice;
+                    }
+                    
+                    if (index === chunks.length - 1) {
+                        utteranceRef.current = u; // Giữ ref của chunk cuối chống GC
+                        u.onend = () => {
+                             if (isPlayingRef.current) {
+                                if (ttsTimerRef.current !== null) window.clearInterval(ttsTimerRef.current);
+                                updateIsPlaying(false);
+                                updateCurrentTime(durationRef.current);
+                                const elapsed = (Date.now() - startTimeRef.current) / 1000;
+                                onEnded?.(elapsed);
+                             }
+                        };
+                    }
+                    
+                    window.speechSynthesis.speak(u);
+                });
+            }
+        }, 50);
 
         if (ttsTimerRef.current !== null) {
             window.clearInterval(ttsTimerRef.current);
@@ -155,17 +230,6 @@ export function useAudioPlayer({ onEnded, onTimeUpdate }: UseAudioPlayerOptions 
                 if (ttsTimerRef.current !== null) window.clearInterval(ttsTimerRef.current);
             }
         }, 200);
-
-        utterance.onend = () => {
-             // Chỉ trigger ended nếu thực sự phát đến cuối (không phải do cancel để seek)
-             if (isPlayingRef.current) {
-                if (ttsTimerRef.current !== null) window.clearInterval(ttsTimerRef.current);
-                updateIsPlaying(false);
-                updateCurrentTime(durationRef.current);
-                const elapsed = (Date.now() - startTimeRef.current) / 1000;
-                onEnded?.(elapsed);
-             }
-        };
     }, [updateCurrentTime, updateIsPlaying, onEnded]);
 
     const play = useCallback(async () => {
@@ -189,7 +253,16 @@ export function useAudioPlayer({ onEnded, onTimeUpdate }: UseAudioPlayerOptions 
 
     const pause = useCallback(() => {
         if (isTTSRef.current) {
-            window.speechSynthesis.pause();
+            // Dùng cancel() thay vì pause() để TTS ngừng ngay lập tức,
+            // thay vì phải đọc cố cho hết từ/câu hiện tại (lỗi cố hữu của Web Speech API)
+            window.speechSynthesis.cancel();
+            if (ttsStartTimeoutRef.current !== null) {
+                window.clearTimeout(ttsStartTimeoutRef.current);
+                ttsStartTimeoutRef.current = null;
+            }
+            if (ttsTimerRef.current !== null) {
+                window.clearInterval(ttsTimerRef.current);
+            }
         } else {
             getAudio().pause();
         }
@@ -232,16 +305,25 @@ export function useAudioPlayer({ onEnded, onTimeUpdate }: UseAudioPlayerOptions 
         seek(currentTimeRef.current + seconds);
     }, [seek]);
 
-    const speakTTS = useCallback((text: string, lang = 'vi-VN') => {
+    const speakTTS = useCallback((text: string, lang = 'vi-VN', retryCount = 0) => {
         if (!('speechSynthesis' in window)) return;
         
-        // Đôi khi voices chưa load kịp, retry nhẹ
-        if (window.speechSynthesis.getVoices().length === 0) {
-            console.log('Voices not loaded, retrying speakTTS in 100ms...');
-            setTimeout(() => speakTTS(text, lang), 100);
+        const voices = window.speechSynthesis.getVoices();
+        const targetPrefix = lang.split('-')[0].toLowerCase();
+        const hasMatchingVoice = voices.some(v => {
+            const normalized = v.lang.replace('_', '-').toLowerCase();
+            return normalized === lang.toLowerCase() || normalized.startsWith(targetPrefix);
+        });
+        
+        // Đôi khi voices chưa load kịp (mảng voices rỗng), retry nhẹ tối đa 3 lần
+        if (!hasMatchingVoice && voices.length === 0 && retryCount < 3) {
+            console.log(`Voices for ${lang} not loaded yet, retrying speakTTS in 200ms...`);
+            setIsLoading(true);
+            setTimeout(() => speakTTS(text, lang, retryCount + 1), 200);
             return;
         }
 
+        setIsLoading(false);
         isTTSRef.current = true;
         ttsTextRef.current = text;
         ttsLangRef.current = lang;
@@ -261,9 +343,16 @@ export function useAudioPlayer({ onEnded, onTimeUpdate }: UseAudioPlayerOptions 
                 updateCurrentTime(audio.currentTime);
             }
         };
+        const handleWaiting = () => {
+            if (!isTTSRef.current) setIsLoading(true);
+        };
+        const handleCanPlay = () => {
+            if (!isTTSRef.current) setIsLoading(false);
+        };
         const handleLoadedMetadata = () => {
             if (!isTTSRef.current) {
                 updateDuration(audio.duration);
+                setIsLoading(false);
             }
         };
         const handleEnded = () => {
@@ -274,11 +363,15 @@ export function useAudioPlayer({ onEnded, onTimeUpdate }: UseAudioPlayerOptions 
         };
 
         audio.addEventListener('timeupdate', handleTimeUpdate);
+        audio.addEventListener('waiting', handleWaiting);
+        audio.addEventListener('canplay', handleCanPlay);
         audio.addEventListener('loadedmetadata', handleLoadedMetadata);
         audio.addEventListener('ended', handleEnded);
 
         return () => {
             audio.removeEventListener('timeupdate', handleTimeUpdate);
+            audio.removeEventListener('waiting', handleWaiting);
+            audio.removeEventListener('canplay', handleCanPlay);
             audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
             audio.removeEventListener('ended', handleEnded);
             audio.pause();
@@ -287,12 +380,18 @@ export function useAudioPlayer({ onEnded, onTimeUpdate }: UseAudioPlayerOptions 
                 blobUrlRef.current = null;
             }
             if (ttsTimerRef.current !== null) window.clearInterval(ttsTimerRef.current);
-            window.speechSynthesis.cancel();
+            if (ttsStartTimeoutRef.current !== null) window.clearTimeout(ttsStartTimeoutRef.current);
+            if ('speechSynthesis' in window) {
+                if (Date.now() - lastUnlockTime > 500) {
+                    window.speechSynthesis.cancel();
+                }
+            }
         };
     }, [getAudio, onEnded, updateCurrentTime, updateDuration, updateIsPlaying]);
 
     return {
         isPlaying,
+        isLoading,
         currentTime,
         duration,
         playbackRate,

@@ -1,351 +1,41 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { useApp } from '../context/AppContext';
-import AppLayout from '../components/AppLayout';
+import SketchFrame from '../components/SketchFrame';
 import AccountUpgradeModal from '../components/AccountUpgradeModal';
-import { SettingsSkeleton, staggerStyle } from '../components/Skeleton';
-import { setPartnerAuthSession, getUserAuthSession, setUserAuthSession } from '../services/api';
+import { getUserAuthSession, setPartnerAuthSession, setUserAuthSession } from '../services/api';
 import { useDeviceInfo } from '../hooks/useDeviceInfo';
+import { useApp } from '../context/AppContext';
 import type { Language, VoiceRegion } from '../types';
 
-const LANGUAGES: { value: Language; label: string; flag: string }[] = [
-    { value: 'vi', label: 'Tiếng Việt', flag: '🇻🇳' },
-    { value: 'en', label: 'English', flag: '🇺🇸' },
-    { value: 'zh', label: '中文', flag: '🇨🇳' },
-    { value: 'ja', label: '日本語', flag: '🇯🇵' },
-    { value: 'ko', label: '한국어', flag: '🇰🇷' },
+const LANGUAGES: { value: Language; label: string; code: string }[] = [
+  { value: 'vi', label: 'Tiếng Việt', code: 'VI' }, { value: 'en', label: 'English', code: 'EN' }, { value: 'zh', label: '中文', code: 'ZH' }, { value: 'ja', label: '日本語', code: 'JA' }, { value: 'ko', label: '한국어', code: 'KO' },
 ];
+const VOICES: { value: VoiceRegion; label: string }[] = [{ value: 'mien_nam', label: 'Miền Nam' }, { value: 'mien_bac', label: 'Miền Bắc' }, { value: 'mien_trung', label: 'Miền Trung' }];
 
 export default function Settings() {
-    const { t, i18n } = useTranslation();
-    const navigate = useNavigate();
-    const { user, dispatch } = useApp();
-    const deviceInfo = useDeviceInfo();
-    const [language, setLanguage] = useState<Language>(
-        (localStorage.getItem('bcsd_language') as Language) || user?.preferred_language || 'vi'
-    );
-    const [voiceRegion] = useState<VoiceRegion>(user?.preferred_voice_region || 'mien_nam');
-    const [saved, setSaved] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [showDeviceInfo, setShowDeviceInfo] = useState(false);
-    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+  const { user, dispatch } = useApp();
+  const deviceInfo = useDeviceInfo();
+  const [language, setLanguage] = useState<Language>((localStorage.getItem('bcsd_language') as Language) || user?.preferred_language || 'vi');
+  const [voiceRegion, setVoiceRegion] = useState<VoiceRegion>(user?.preferred_voice_region || 'mien_nam');
+  const [saved, setSaved] = useState(false);
+  const [showDeviceInfo, setShowDeviceInfo] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const profileName = useMemo(() => { if (!user) return t('settings.tourist'); const email = user.email?.trim() || ''; if (user.full_name?.trim()) return user.full_name.trim(); if (user.username?.trim()) return user.username.trim(); return email.endsWith('@guest.bcsd.local') ? t('settings.tourist') : email.split('@')[0] || t('settings.tourist'); }, [t, user]);
+  const hasRegisteredEmail = Boolean(user?.email && !user.email.endsWith('@guest.bcsd.local'));
+  const browser = useMemo(() => { const ua = deviceInfo.userAgent || ''; if (ua.includes('Edg/')) return 'Edge'; if (ua.includes('Chrome/')) return 'Chrome'; if (ua.includes('Firefox/')) return 'Firefox'; if (ua.includes('Safari/')) return 'Safari'; return 'Unknown'; }, [deviceInfo.userAgent]);
 
-    // Simulate load
-    useState(() => {
-        setTimeout(() => setLoading(false), 400);
-    });
+  const save = () => {
+    const updatedUser = user ? { ...user, preferred_language: language, preferred_voice_region: voiceRegion } : null;
+    if (updatedUser) { dispatch({ type: 'SET_USER', payload: updatedUser }); const session = getUserAuthSession(); if (session) setUserAuthSession({ ...session, user: updatedUser }); }
+    localStorage.setItem('bcsd_language', language); localStorage.setItem('bcsd_voice_region', voiceRegion); void i18n.changeLanguage(language); setSaved(true); window.setTimeout(() => setSaved(false), 2000);
+  };
+  const openPartner = () => { setPartnerAuthSession(null); navigate('/partner/login?next=%2Fpartner'); };
+  const logout = () => { setUserAuthSession(null); dispatch({ type: 'CLEAR_USER' }); navigate('/login', { replace: true }); };
 
-    const handleSave = () => {
-        if (user) {
-            const updatedUser = { ...user, preferred_language: language, preferred_voice_region: voiceRegion };
-            dispatch({ type: 'SET_USER', payload: updatedUser });
-            
-            // Persist the updated user in the current session
-            const session = getUserAuthSession();
-            if (session) {
-                setUserAuthSession({ ...session, user: updatedUser });
-            }
-        }
-        localStorage.setItem('bcsd_language', language);
-        localStorage.setItem('bcsd_voice_region', voiceRegion);
-        // Change i18n language to reflect immediately
-        i18n.changeLanguage(language);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
-    };
+  const deviceRows = [['Device ID', `${deviceInfo.deviceId.slice(0, 20)}...`], ['Platform', deviceInfo.platform], ['Browser', browser], ['Vendor', deviceInfo.vendor || '—'], [t('settings.screen'), deviceInfo.screenResolution], ['Color depth', `${deviceInfo.colorDepth} bit`], [t('settings.languageLabel'), deviceInfo.language], [t('settings.timezone'), deviceInfo.timezone], [t('settings.connection'), deviceInfo.onLine ? deviceInfo.effectiveType || 'Online' : 'Offline'], ['Cookies', deviceInfo.cookieEnabled ? 'Enabled' : 'Disabled']];
 
-    const handleOpenPartnerPortal = () => {
-        // Luôn hiển thị màn login/signup partner khi đi từ mục GÓC ĐỐI TÁC.
-        setPartnerAuthSession(null);
-        navigate('/partner/login?next=%2Fpartner');
-    };
-
-    const handleUserLogout = () => {
-        setUserAuthSession(null);
-        dispatch({ type: 'CLEAR_USER' });
-        navigate('/login', { replace: true });
-    };
-
-    const handleOpenInvoice = () => {
-        navigate('/invoice');
-    };
-
-    /** Tên hiển thị: đã đăng nhập thật → full_name / username / phần trước @; khách / chưa login → Khách du lịch */
-    const profileDisplayName = useMemo(() => {
-        if (!user) return t('settings.tourist');
-        const email = user.email?.trim() || '';
-        if (email.endsWith('@guest.bcsd.local')) return t('settings.tourist');
-        if (!email) return t('settings.tourist');
-        const fn = user.full_name?.trim();
-        if (fn) return fn;
-        const un = user.username?.trim();
-        if (un) return un;
-        return email.split('@')[0] || t('settings.tourist');
-    }, [user, t]);
-
-    const hasRegisteredEmail = Boolean(user?.email && !user.email.endsWith('@guest.bcsd.local'));
-    const browserLabel = useMemo(() => {
-        const ua = deviceInfo.userAgent || '';
-        if (ua.includes('Edg/')) return 'Edge';
-        if (ua.includes('Chrome/')) return 'Chrome';
-        if (ua.includes('Firefox/')) return 'Firefox';
-        if (ua.includes('Safari/') && !ua.includes('Chrome/')) return 'Safari';
-        return 'Unknown';
-    }, [deviceInfo.userAgent]);
-
-    if (loading) {
-        return (
-            <AppLayout title={t('settings.title')}>
-                <SettingsSkeleton />
-            </AppLayout>
-        );
-    }
-
-    return (
-        <AppLayout title={t('settings.title')}>
-            {/* User Card */}
-            <div className="mx-4 mt-4 animate-fade-slide-up">
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center gap-4">
-                    <div className="size-14 rounded-full bg-gradient-to-br from-primary to-orange-400 flex items-center justify-center shadow-lg shadow-primary\/20">
-                        <span className="material-symbols-outlined text-white text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>person</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="font-bold text-slate-900 truncate">{profileDisplayName}</p>
-                        {user?.email?.endsWith('@guest.bcsd.local') ? (
-                            <button
-                                onClick={() => setShowUpgradeModal(true)}
-                                className="mt-1 flex items-center gap-1 text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full tap-scale"
-                            >
-                                <span className="material-symbols-outlined text-[14px]">link</span>
-                                {t('settings.linkAccount')}
-                            </button>
-                        ) : hasRegisteredEmail ? (
-                            <p className="text-xs text-slate-500 mt-0.5 truncate">{user?.email}</p>
-                        ) : null}
-                    </div>
-                </div>
-            </div>
-
-            {/* Language Section */}
-            <div className="mx-4 mt-5 animate-stagger-item" style={staggerStyle(0)}>
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">{t('settings.language')}</h3>
-                <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
-                    {LANGUAGES.map((lang, i) => (
-                        <button
-                            key={lang.value}
-                            onClick={() => setLanguage(lang.value)}
-                            className={`w-full flex items-center justify-between p-4 tap-scale transition-all hover:bg-slate-50 ${i > 0 ? 'border-t border-slate-50' : ''
-                                }`}
-                        >
-                            <div className="flex items-center gap-3">
-                                <span className="text-xl">{lang.flag}</span>
-                                <span className={`text-sm font-semibold transition-colors ${language === lang.value ? 'text-primary' : 'text-slate-700'}`}>
-                                    {lang.label}
-                                </span>
-                            </div>
-                            {language === lang.value && (
-                                <span className="material-symbols-outlined text-primary text-lg animate-pop-in" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                            )}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Voice Region Section */}
-            {/*
-            <div className="mx-4 mt-5 animate-stagger-item" style={staggerStyle(1)}>
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">{t('settings.voiceRegion')}</h3>
-                <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
-                    {VOICE_REGIONS.map((vr, i) => (
-                        <button
-                            key={vr.value}
-                            onClick={() => setVoiceRegion(vr.value)}
-                            className={`w-full flex items-center justify-between p-4 tap-scale transition-all hover:bg-slate-50 ${i > 0 ? 'border-t border-slate-50' : ''
-                                }`}
-                        >
-                            <div className="flex items-center gap-3">
-                                <span className="text-xl">{vr.icon}</span>
-                                <div>
-                                    <p className={`text-sm font-semibold text-left transition-colors ${voiceRegion === vr.value ? 'text-primary' : 'text-slate-700'}`}>
-                                        {vr.label}
-                                    </p>
-                                    <p className="text-xs text-slate-400 mt-0.5 text-left">{vr.subtitle}</p>
-                                </div>
-                            </div>
-                            {voiceRegion === vr.value && (
-                                <span className="material-symbols-outlined text-primary text-lg animate-pop-in" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                            )}
-                        </button>
-                    ))}
-                </div>
-            </div>
-            */}
-
-            {/* App Info */}
-            <div className="mx-4 mt-5 animate-stagger-item" style={staggerStyle(2)}>
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">{t('settings.appInfo')}</h3>
-                <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
-                    <div className="flex items-center justify-between p-4">
-                        <span className="text-sm text-slate-600">{t('common.version')}</span>
-                        <span className="text-sm text-slate-400 font-mono">1.0.0</span>
-                    </div>
-                    <div className="flex items-center justify-between p-4 border-t border-slate-50">
-                        <span className="text-sm text-slate-600">{t('settings.appName')}</span>
-                        <span className="text-[10px] bg-primary\/10 text-primary px-2.5 py-0.5 rounded-full font-bold">Beta</span>
-                    </div>
-                </div>
-            </div>
-
-            <div className="mx-4 mt-5 animate-stagger-item" style={staggerStyle(3)}> 
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">{t('settings.deviceInfo')}</h3>
-                <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
-                    <button
-                        onClick={() => setShowDeviceInfo(!showDeviceInfo)}
-                        className="w-full flex items-center justify-between p-4 tap-scale transition-all hover:bg-slate-50"
-                    >
-                        <div className="flex items-center gap-3">
-                            <span className="material-symbols-outlined text-slate-600 text-xl" style={{ fontVariationSettings: "'FILL' 0" }}>devices</span>
-                            <span className="text-sm font-semibold text-slate-700">{t('settings.viewDeviceDetails')}</span>
-                        </div>
-                        <span className={`material-symbols-outlined text-slate-400 text-lg transition-transform ${showDeviceInfo ? 'rotate-180' : ''}`} style={{ fontVariationSettings: "'FILL' 0" }}>expand_more</span>
-                    </button>
-                    
-                    {showDeviceInfo && (
-                        <div className="border-t border-slate-50 p-4 space-y-3">
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-slate-500">Device ID</span>
-                                <span className="text-xs font-mono text-slate-600">{deviceInfo.deviceId.slice(0, 20)}...</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-slate-500">Platform</span>
-                                <span className="text-xs text-slate-600">{deviceInfo.platform}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-slate-500">Browser</span>
-                                <span className="text-xs text-slate-600">{browserLabel}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-slate-500">Vendor</span>
-                                <span className="text-xs text-slate-600">{deviceInfo.vendor || '-'}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-slate-500">{t('settings.screen')}</span>
-                                <span className="text-xs text-slate-600">{deviceInfo.screenResolution}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-slate-500">Color depth</span>
-                                <span className="text-xs text-slate-600">{deviceInfo.colorDepth} bit</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-slate-500">{t('settings.languageLabel')}</span>
-                                <span className="text-xs text-slate-600">{deviceInfo.language}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-slate-500">{t('settings.timezone')}</span>
-                                <span className="text-xs text-slate-600">{deviceInfo.timezone}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-slate-500">{t('settings.connection')}</span>
-                                <span className="text-xs text-slate-600">
-                                    {deviceInfo.onLine ? (
-                                        <span className="flex items-center gap-1">
-                                            <span className="material-symbols-outlined text-green-500 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>wifi</span>
-                                            {deviceInfo.effectiveType || 'Online'}
-                                        </span>
-                                    ) : (
-                                        <span className="flex items-center gap-1">
-                                            <span className="material-symbols-outlined text-rose-500 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>wifi_off</span>
-                                            Offline
-                                        </span>
-                                    )}
-                                </span>
-                            </div>
-                            {deviceInfo.connectionType && (
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs text-slate-500">Network type</span>
-                                    <span className="text-xs text-slate-600">{deviceInfo.connectionType}</span>
-                                </div>
-                            )}
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-slate-500">Cookies</span>
-                                <span className="text-xs text-slate-600">{deviceInfo.cookieEnabled ? 'Enabled' : 'Disabled'}</span>
-                            </div>
-                            {deviceInfo.memory && (
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs text-slate-500">{t('settings.memory')}</span>
-                                    <span className="text-xs text-slate-600">{deviceInfo.memory} GB</span>
-                                </div>
-                            )}
-                            {deviceInfo.hardwareConcurrency && (
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs text-slate-500">{t('settings.cpu')}</span>
-                                    <span className="text-xs text-slate-600">{deviceInfo.hardwareConcurrency} cores</span>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Partner Portal Entry */}
-            <div className="mx-4 mt-5 animate-stagger-item" style={staggerStyle(4)}>
-                <button
-                    onClick={handleOpenPartnerPortal}
-                    className="w-full overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-r from-orange-50 via-amber-50 to-white p-4 text-left shadow-sm transition hover:shadow-md"
-                >
-                    <div className="flex items-center justify-between gap-3">
-                        <div>
-                            <p className="text-xs font-bold uppercase tracking-wider text-primary/80">{t('partner.program')}</p>
-                            <h3 className="mt-1 text-sm font-bold text-slate-900">{t('partner.portalTitle')}</h3>
-                            <p className="mt-1 text-xs text-slate-500">{t('partner.entryDescription')}</p>
-                        </div>
-                        <div className="flex size-10 items-center justify-center rounded-full bg-primary text-white">
-                            <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>storefront</span>
-                        </div>
-                    </div>
-                </button>
-            </div>
-
-            <div className="mx-4 mt-4 animate-stagger-item" style={staggerStyle(5)}>
-                <button
-                    onClick={handleOpenInvoice}
-                    className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:shadow-md"
-                >
-                    <div className="flex items-center justify-between gap-3">
-                        <div>
-                            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{t('settings.payment')}</p>
-                            <h3 className="mt-1 text-sm font-bold text-slate-900">{t('settings.viewInvoices')}</h3>
-                            <p className="mt-1 text-xs text-slate-500">{t('settings.orderFood')}</p>
-                        </div>
-                        <div className="flex size-10 items-center justify-center rounded-full bg-slate-900 text-white">
-                            <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>receipt_long</span>
-                        </div>
-                    </div>
-                </button>
-            </div>
-
-            {/* Save Button */}
-            <div className="mx-4 mt-6 mb-4 animate-stagger-item" style={staggerStyle(6)}>
-                <button
-                    onClick={handleSave}
-                    className={`w-full py-4 rounded-2xl font-bold text-base tap-scale transition-all shadow-lg ${saved ? 'bg-green-500 text-white shadow-green-200 animate-bounce-in' : 'bg-primary text-white shadow-primary/20 hover:shadow-xl'
-                        }`}
-                >
-                    {saved ? t('common.saved') : t('common.save')}
-                </button>
-
-                <button
-                    onClick={handleUserLogout}
-                    className="mt-3 w-full rounded-2xl border border-rose-200 bg-rose-50 py-3 text-sm font-bold text-rose-700 transition hover:bg-rose-100"
-                >
-                    {t('settings.logout')}
-                </button>
-            </div>
-
-            {showUpgradeModal && (
-                <AccountUpgradeModal onClose={() => setShowUpgradeModal(false)} />
-            )}
-        </AppLayout>
-    );
+  return <SketchFrame active="settings" className="settings-frame" searchPlaceholder="TÌM CÀI ĐẶT..." topRight={<div className="sketch-topbar-state"><span className="sketch-live-dot" />VOICE · VI</div>} routeMark="VI" routeTitle="Giọng Miền Nam" routeMeta="VI · AUTO GEOFENCE ON" routeProgress={72} hideTopbar={true}><div className="settings-page" style={{ paddingTop: '24px' }}><header className="settings-topbar"><div><h1>{t('settings.pageTitle')}</h1><p>VOICE · LANGUAGE · ACCOUNT · PARTNER</p></div></header><div className="settings-grid"><div className="settings-main"><article className="settings-profile"><div className="settings-avatar">HM</div><div><span className="sketch-chip sketch-chip-secondary">{t('settings.guestRole')}</span><h2>{profileName}</h2><p>{hasRegisteredEmail ? user?.email : 'guest_4839@guest.bcsd.local'}</p><span className="sketch-mono">DEVICE ID / {deviceInfo.deviceId}</span></div><div className="settings-profile-actions"><button className={`sketch-btn ${hasRegisteredEmail ? 'sketch-btn-outline' : 'sketch-btn-primary'}`} onClick={() => setShowUpgradeModal(true)}>{hasRegisteredEmail ? t('settings.accountLinked') : t('settings.linkAccount')}</button><button className="sketch-btn sketch-btn-text" onClick={() => navigate('/login')}>{t('settings.loginOther')}</button></div></article><section className="settings-section"><div className="settings-section-head"><div><h2>{t('settings.audioLanguage')}</h2><p>{t('settings.audioLanguageDesc')}</p></div><button className="sketch-btn sketch-btn-primary" onClick={save}>{saved ? t('common.saved') : t('common.save')}</button></div><div className="settings-row"><div><strong>{t('settings.voiceRegion')}</strong><small>{t('settings.voiceRegionDesc')}</small></div><div className="settings-voice">{VOICES.map((voice) => <button className={voiceRegion === voice.value ? 'is-active' : ''} key={voice.value} onClick={() => setVoiceRegion(voice.value)}>{voice.label}</button>)}</div></div><div className="settings-row"><div><strong>{t('settings.uiLanguage')}</strong><small>{t('settings.uiLanguageDesc')}</small></div><div className="settings-language">{LANGUAGES.map((lang) => <button className={`settings-language-row ${language === lang.value ? 'is-active' : ''}`} key={lang.value} onClick={() => setLanguage(lang.value)}><span className="settings-language-code">{lang.code}</span><span>{lang.label}</span><span className="settings-language-check">{language === lang.value ? '✓' : ''}</span></button>)}</div></div></section><section className="settings-section"><div className="settings-section-head"><div><h2>{t('settings.systemData')}</h2><p>{t('settings.systemDataDesc')}</p></div></div><div className="settings-system-row"><span className="settings-system-icon" style={{ display: 'flex', justifyContent: 'center' }}><svg className="sketch-icon" viewBox="0 0 24 24"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg></span><div><strong>{t('settings.clearCache')}</strong><span>{t('settings.clearCacheDesc')}</span></div><button className="sketch-btn sketch-btn-outline" onClick={() => window.location.reload()}>{t('settings.execute')}</button></div><div className="settings-system-row"><span className="settings-system-icon" style={{ display: 'flex', justifyContent: 'center' }}><svg className="sketch-icon" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17V7"/></svg></span><div><strong>{t('settings.invoices')}</strong><span>{t('settings.invoicesDesc')}</span></div><button className="sketch-btn sketch-btn-outline" onClick={() => navigate('/invoice')}>{t('settings.open')}</button></div><button className="settings-system-row" onClick={() => setShowDeviceInfo((value) => !value)}><span className="settings-system-icon" style={{ display: 'flex', justifyContent: 'center' }}><svg className="sketch-icon" viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg></span><div><strong>{t('settings.deviceInfo')}</strong><span>{showDeviceInfo ? t('settings.collapseDevice') : t('settings.expandDevice')}</span></div><span>⌄</span></button>{showDeviceInfo && <div className="settings-device"><div className="settings-device-grid">{deviceRows.map(([label, value]) => <div className="settings-device-row" key={label}><span>{label}</span><strong>{value}</strong></div>)}</div></div>}</section></div><aside className="settings-side"><div className="settings-callout"><span className="sketch-label">{t('settings.partnerLabel')}</span><h2>{t('settings.partnerTitle')}</h2><p>{t('settings.partnerDesc')}</p><button className="sketch-btn" onClick={openPartner}>{t('settings.partnerAccess')}</button></div>{hasRegisteredEmail && <div className="settings-danger"><h3>{t('settings.dangerZone')}</h3><p>{t('settings.logoutDesc')}</p><button className="sketch-btn sketch-btn-danger" onClick={logout}>{t('settings.logout')}</button></div>}</aside></div></div>{showUpgradeModal && <AccountUpgradeModal onClose={() => setShowUpgradeModal(false)} />}</SketchFrame>;
 }
