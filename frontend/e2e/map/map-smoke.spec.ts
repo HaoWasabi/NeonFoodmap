@@ -25,7 +25,7 @@ test.describe('map', () => {
       distance: index * 10,
     }));
 
-    await page.route('http://localhost:8000/api/pois/near-me/**', async (route) => {
+    await page.route('**/api/pois/near-me/**', async (route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(pois) });
     });
     await page.route('https://tiles.openfreemap.org/styles/bright', async (route) => {
