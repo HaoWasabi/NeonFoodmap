@@ -36,7 +36,10 @@ env:
   ECS_CLUSTER: ${{ vars.ECS_CLUSTER || 'NeonFoodmap-cluster' }}
   ECS_BACKEND_SERVICE: ${{ vars.ECS_BACKEND_SERVICE || 'svc-neonfoodmap-be' }}
   ECS_BACKEND_TASK_DEF: ${{ vars.ECS_BACKEND_TASK_DEF || 'neonfoodmap-task-be' }}
-  APP_URL: ${{ vars.APP_URL || 'https://neonfoodmap.example.com' }}
+  ECS_FRONTEND_SERVICE: ${{ vars.ECS_FRONTEND_SERVICE || 'svc-neonfoodmap-fe' }}
+  ECS_FRONTEND_TASK_DEF: ${{ vars.ECS_FRONTEND_TASK_DEF || 'neonfoodmap-task-fe' }}
+  VITE_API_URL: ${{ vars.VITE_API_URL || 'http://ALB-NeonFoodMap-406336237.ap-southeast-1.elb.amazonaws.com/api/' }}
+  APP_URL: ${{ vars.APP_URL || 'http://ALB-NeonFoodMap-406336237.ap-southeast-1.elb.amazonaws.com' }}
 
 jobs:
   # ─────────────────────────────────────────────
@@ -168,6 +171,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     outputs:
       backend-image: ${{ steps.set-output.outputs.image }}
+      frontend-image: ${{ steps.set-frontend-output.outputs.image }}
       image-tag: ${{ steps.vars.outputs.sha_tag }}
 
     steps:
@@ -220,6 +224,11 @@ jobs:
         id: set-output
         run: |
           echo "image=${{ env.ECR_REGISTRY }}/neonfoodmap-backend:${{ steps.vars.outputs.sha_tag }}" >> $GITHUB_OUTPUT
+
+      - name: Set frontend image output
+        id: set-frontend-output
+        run: |
+          echo "image=${{ env.ECR_REGISTRY }}/neonfoodmap-frontend:${{ steps.vars.outputs.sha_tag }}" >> $GITHUB_OUTPUT
 
   # ─────────────────────────────────────────────
   # Job 5: Deploy Backend to ECS
@@ -283,13 +292,74 @@ jobs:
                 "assignPublicIp": "ENABLED"
               }
             }'
+      - name: Verify DB Connection (connection.ensure_connection)
+        run: |
+          aws ecs run-task \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --task-definition ${{ env.ECS_BACKEND_TASK_DEF }} \
+            --overrides '{
+              "containerOverrides": [{
+                "name": "backend",
+                "command": ["python", "manage.py", "shell", "-c", "from django.db import connection; connection.ensure_connection(); print(\"SUCCESS_DB_CONNECTED: connection.ensure_connection() executed without exception\")"]
+              }]
+            }' \
+            --launch-type FARGATE \
+            --network-configuration '{
+              "awsvpcConfiguration": {
+                "subnets": ${{ secrets.ECS_SUBNETS }},
+                "securityGroups": ${{ secrets.ECS_SECURITY_GROUPS }},
+                "assignPublicIp": "ENABLED"
+              }
+            }'
 
   # ─────────────────────────────────────────────
-  # Job 6: Post-Deploy Smoke Tests
+  # Job 6: Deploy Frontend to ECS
+  # ─────────────────────────────────────────────
+  deploy-frontend:
+    name: Deploy Frontend to ECS
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: ${{ env.APP_URL }}
+
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download current task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition ${{ env.ECS_FRONTEND_TASK_DEF }} \
+            --query 'taskDefinition' \
+            --output json > task-def.json
+
+      - name: Update task definition with new image
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-def.json
+          container-name: frontend
+          image: ${{ needs.build-and-push.outputs.frontend-image }}
+
+      - name: Deploy to Amazon ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_FRONTEND_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+  # ─────────────────────────────────────────────
+  # Job 7: Post-Deploy Smoke Tests
   # ─────────────────────────────────────────────
   smoke-tests:
     name: Post-Deploy Smoke Tests
-    needs: deploy-backend
+    needs: [deploy-backend, deploy-frontend]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 

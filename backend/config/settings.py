@@ -19,10 +19,11 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dev-key-change-in-producti
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 # 'localhost,127.0.0.1'
-ALLOWED_HOSTS_STR = os.getenv('ALLOWED_HOSTS', '*',)
-ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS_STR.split(',') if h.strip()]
-if DEBUG:
-    ALLOWED_HOSTS += ['.ngrok-free.app', '.ngrok-free.dev']
+ALLOWED_HOSTS = ['*']
+# ALLOWED_HOSTS_STR = os.getenv('ALLOWED_HOSTS', '*',)
+# ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS_STR.split(',') if h.strip()]
+# if DEBUG:
+#     ALLOWED_HOSTS += ['.ngrok-free.app', '.ngrok-free.dev']
 
 # Application definition
 INSTALLED_APPS = [
@@ -50,6 +51,41 @@ INSTALLED_APPS = [
     'analytics.apps.AnalyticsConfig',
     'payments.apps.PaymentsConfig',
 ]
+
+# Chỉ bật S3 Storage khi có biến môi trường AWS_STORAGE_BUCKET_NAME
+_s3_bucket = os.getenv('AWS_STORAGE_BUCKET_NAME', '').strip()
+if _s3_bucket:
+    INSTALLED_APPS += ["storages"]
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3.S3Storage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage", # Giữ staticfile local trong container
+        }
+    }
+
+# Logging: Luôn có console handler để xem log trên CloudWatch/ECS stdout
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{levelname}] {asctime} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+}
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -179,6 +215,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5174",
     "http://127.0.0.1:5174",
     "https://buocchansoida.netlify.app",
+    # ALB endpoints
+    "http://alb-neonfoodmap-406336237.ap-southeast-1.elb.amazonaws.com",
+    "https://alb-neonfoodmap-406336237.ap-southeast-1.elb.amazonaws.com",
 ]
 
 # Comma-separated, e.g. http://YOUR_EC2_IP:3000 (Docker frontend mapped port)
@@ -200,6 +239,9 @@ CSRF_TRUSTED_ORIGINS = [
     "https://buocchansoida.netlify.app",
     "https://*.ngrok-free.app",
     "https://*.ngrok-free.dev",
+    # ALB endpoints (HTTP cho testing, HTTPS cho production)
+    "http://alb-neonfoodmap-406336237.ap-southeast-1.elb.amazonaws.com",
+    "https://alb-neonfoodmap-406336237.ap-southeast-1.elb.amazonaws.com",
 ]
 
 _csrf_extra = os.getenv("CSRF_TRUSTED_ORIGINS_EXTRA", "")

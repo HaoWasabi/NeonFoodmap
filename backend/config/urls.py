@@ -5,6 +5,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from core.views import health_check
 
 # ── Custom Admin Branding & Dashboard Stats ─────────────────────────────────
 # Patch admin.site.index để inject realtime stats vào trang chủ admin.
@@ -22,6 +23,8 @@ admin.site._get_stats = _types.MethodType(_bcsd_cls._get_stats, admin.site)
 admin.site.index      = _types.MethodType(_bcsd_cls.index,      admin.site)
 
 urlpatterns = [
+    path('', health_check),           # Health check tại gốc /
+    path('health/', health_check),     # Health check tại /health/
     path('admin/', admin.site.urls),
     path('api/', include('core.urls')),
     path('api/pois/', include('pois.urls')),
