@@ -16,7 +16,7 @@ const MENU: MenuItem[] = [{ name: 'Ốc Hương Hoàng Kim', category: 'Món sig
 
 function parseHours(value: string) { const match = value.match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/); return { open: match?.[1] || '', close: match?.[2] || '' }; }
 function statusFromNumber(status?: number): ApprovalStatus { return status === 1 ? 'approved' : status === 0 ? 'needs_fix' : 'pending'; }
-function publicQrUrl(poiId: string) { return `${window.location.origin}/api/pois/scan/?code=${encodeURIComponent(poiId || 'POI-VK-088')}`; }
+function publicQrUrl(poiId: string) { return `${window.location.origin}/api/pois/scan/?code=${encodeURIComponent(poiId ? `POI_${poiId}` : 'POI-VK-088')}`; }
 
 export default function PartnerPortal() {
   const navigate = useNavigate();

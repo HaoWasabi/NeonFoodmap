@@ -538,7 +538,7 @@ export const checkPartnerPremiumPurchase = async (): Promise<{ purchased: boolea
 };
 
 // --- POI endpoints ---
-export const getPOIsNearMe = async (lat: number, lng: number, language = 'vi', voiceRegion = 'mien_nam', radius = 500): Promise<POI[]> => {
+export const getPOIsNearMe = async (lat: number, lng: number, language = 'vi', voiceRegion = 'mien_nam', radius = 5000): Promise<POI[]> => {
     const { data } = await apiClient.get<POI[]>('/pois/near-me/', { params: { lat, lng, radius, language, voice_region: voiceRegion } });
     return data;
 };
