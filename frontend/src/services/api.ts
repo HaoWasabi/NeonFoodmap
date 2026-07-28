@@ -161,6 +161,7 @@ apiClient.interceptors.request.use((config) => {
     const isPartnerRoute = 
         url.includes('/partners/') || 
         url.includes('/pois/my-poi') || 
+        url.includes('/payments/partner-premium') ||
         (url.includes('/media') && config.method?.toLowerCase() !== 'get');
         
     if (isPartnerRoute) {
@@ -172,6 +173,13 @@ apiClient.interceptors.request.use((config) => {
         const session = getUserAuthSession();
         if (session?.access) {
             config.headers.Authorization = `Bearer ${session.access}`;
+        } else {
+            // Fallback: nếu không có User session nhưng có Partner session
+            // (ví dụ: partner gọi PayPal endpoints từ Partner Portal)
+            const partnerSession = getPartnerAuthSession();
+            if (partnerSession?.access) {
+                config.headers.Authorization = `Bearer ${partnerSession.access}`;
+            }
         }
     }
 
@@ -200,6 +208,7 @@ apiClient.interceptors.response.use(
         const isPartnerRoute = 
             url.includes('/partners/') || 
             url.includes('/pois/my-poi') || 
+            url.includes('/payments/partner-premium') ||
             (url.includes('/media') && originalRequest.method?.toLowerCase() !== 'get');
 
         // Avoid refresh loop for login/refresh/logout/guest endpoints
@@ -257,6 +266,41 @@ apiClient.interceptors.response.use(
             // --- USER/GUEST REFRESH ---
             const session = getUserAuthSession();
             if (!session?.refresh) {
+                // Fallback: thử Partner refresh nếu không có User session
+                const partnerSession = getPartnerAuthSession();
+                if (partnerSession?.refresh) {
+                    try {
+                        if (!partnerRefreshPromise) {
+                            partnerRefreshPromise = (async () => {
+                                const refreshResp = await axios.post<{ access?: string }>(
+                                    `${API_BASE_URL}/partners/account/login/refresh/`,
+                                    { refresh: partnerSession.refresh },
+                                    { 
+                                        headers: { 
+                                            'Content-Type': 'application/json',
+                                            'ngrok-skip-browser-warning': 'true' 
+                                        }, 
+                                        timeout: 10000 
+                                    }
+                                );
+                                const newAccess = refreshResp.data?.access;
+                                if (!newAccess) throw new Error('Refresh failed');
+                                
+                                const nextSession: PartnerAuthSession = { ...partnerSession, access: newAccess };
+                                setPartnerAuthSession(nextSession);
+                                return newAccess;
+                            })().finally(() => { partnerRefreshPromise = null; });
+                        }
+
+                        const newAccess = await partnerRefreshPromise;
+                        originalRequest._retry = true;
+                        originalRequest.headers.Authorization = `Bearer ${newAccess}`;
+                        return apiClient(originalRequest);
+                    } catch {
+                        setPartnerAuthSession(null);
+                        return Promise.reject(error);
+                    }
+                }
                 setUserAuthSession(null);
                 return Promise.reject(error);
             }

@@ -8,7 +8,7 @@ from users.permissions import user_has_partner_premium_access
 class PartnerAdmin(admin.ModelAdmin):
     list_display = [
         'id', 'business_name', 'address', 'user', 'poi', 'poi_timestamps',
-        'opening_hours', 'has_intro_tts', 'status_badge', 'premium_badge',
+        'opening_hours', 'has_intro_tts', 'qr_url_badge', 'status_badge', 'premium_badge',
     ]
     list_filter = ['status', 'poi', 'user']
     search_fields = ['business_name', 'address', 'poi__name', 'user__email', 'user__username']
@@ -87,6 +87,17 @@ class PartnerAdmin(admin.ModelAdmin):
             )
         return format_html('<span style="color:#6c757d">— Chưa có</span>')
     has_intro_tts.short_description = 'Intro TTS'
+
+    def qr_url_badge(self, obj):
+        if obj.qr_url and obj.qr_url.strip():
+            short = obj.qr_url[:40] + ('...' if len(obj.qr_url) > 40 else '')
+            return format_html(
+                '<a href="{}" target="_blank" style="color:#2563eb;font-size:11px" title="{}">'
+                '🔗 {}</a>',
+                obj.qr_url, obj.qr_url, short,
+            )
+        return format_html('<span style="color:#dc3545;font-weight:600">⚠️ Chưa có QR link</span>')
+    qr_url_badge.short_description = 'QR Menu Link'
 
     def status_badge(self, obj):
         colors = {
