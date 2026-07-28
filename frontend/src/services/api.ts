@@ -405,6 +405,9 @@ export interface PartnerAnalyticsData {
     wow_impressions: number | null;
     wow_interactions: number | null;
     has_poi: boolean;
+    hourly_breakdown: Array<{ hour: number; count: number }>;
+    top_dishes: Array<{ rank: number; name: string; views: number }>;
+    distribution_points: Array<{ id: string; label: string; scans: number; type: string }>;
 }
 
 export const getPartnerAnalytics = async (): Promise<PartnerAnalyticsData> => {

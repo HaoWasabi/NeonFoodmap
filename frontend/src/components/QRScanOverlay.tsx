@@ -118,17 +118,9 @@ export default function QRScanOverlay({ onClose, onScanSuccess }: QRScanOverlayP
             await handlePOI(poi);
         } catch (err) {
             console.error('[QR Scan] Failed processing:', err);
-            const mockPoi: POI = {
-                id: 'demo-001',
-                name: 'Phố Ẩm Thực Vĩnh Khánh',
-                description: 'Vĩnh Khánh là con phố ẩm thực nổi tiếng tại Quận 4, TP. Hồ Chí Minh.',
-                latitude: 10.755,
-                longitude: 106.703,
-                geofence_radius: 50,
-                category: 'food',
-                qr_code_data: decodedText,
-            };
-            await handlePOI(mockPoi);
+            setScanOk(false);
+            processedRef.current = false;
+            alert('Not found info from this QR.');
         }
     }, [handlePOI]);
 
@@ -256,6 +248,57 @@ export default function QRScanOverlay({ onClose, onScanSuccess }: QRScanOverlayP
         }
     };
 
+    /** Chụp frame hiện tại từ camera và quét QR */
+    const captureAndScan = useCallback(async () => {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        if (!video || !canvas) return;
+        if (video.readyState < video.HAVE_ENOUGH_DATA) {
+            alert('Camera chưa sẵn sàng. Vui lòng thử lại.');
+            return;
+        }
+
+        // Dừng scan interval tạm thời
+        if (scanIntervalRef.current) {
+            clearInterval(scanIntervalRef.current);
+            scanIntervalRef.current = null;
+        }
+
+        setScanOk(true);
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+
+        try {
+            const blob = await new Promise<Blob | null>((resolve) =>
+                canvas.toBlob(resolve, 'image/png')
+            );
+            if (!blob) {
+                setScanOk(false);
+                alert('Không thể chụp ảnh. Vui lòng thử lại.');
+                return;
+            }
+
+            const { Html5Qrcode } = await import('html5-qrcode');
+            const html5Qr = new Html5Qrcode('bcsd-qr-reader', { verbose: false });
+            const file = new File([blob], 'capture.png', { type: 'image/png' });
+            const decodedText = await html5Qr.scanFile(file, false);
+            console.log(`[QR Scan] Captured frame decoded: ${decodedText}`);
+            handleQRResult(decodedText);
+        } catch (err) {
+            console.error('[QR Scan] Capture scan failed:', err);
+            setScanOk(false);
+            processedRef.current = false;
+            alert('Không tìm thấy mã QR trong ảnh chụp. Hãy đưa mã QR vào khung và thử lại.');
+            // Restart scanning
+            startScanning();
+        }
+    }, [handleQRResult, startScanning]);
+
     const handleClose = useCallback(() => {
         stopCamera();
         onClose();
@@ -346,7 +389,7 @@ export default function QRScanOverlay({ onClose, onScanSuccess }: QRScanOverlayP
                                 className="px-5 py-2.5 bg-primary text-white font-bold rounded-none flex items-center gap-2 active:scale-95 transition-transform"
                             >
                                 <span className="material-symbols-outlined text-xl">photo_camera</span>
-                                Chụp ảnh QR
+                                Chụp ảnh QR (Camera)
                             </button>
                             <button
                                 onClick={() => captureInputRef.current?.click()}
@@ -375,12 +418,11 @@ export default function QRScanOverlay({ onClose, onScanSuccess }: QRScanOverlayP
 
                     <div className="flex flex-col items-center gap-2">
                         <button
-                            onClick={() => fileInputRef.current?.click()}
+                            onClick={captureAndScan}
                             className="flex size-14 items-center justify-center border-2 border-primary bg-white text-primary rounded-none active:scale-95 transition-transform"
                         >
-                            <span className="material-symbols-outlined text-3xl">photo_camera</span>
+                            <span className="material-symbols-outlined text-3xl">qr_code_scanner</span>
                         </button>
-                        <span className="t-label text-white/80">{cameraError ? 'Chụp QR' : ''}</span>
                     </div>
                 </div>
                 <div className="w-32 h-1.5 bg-white/20 rounded-full" />
