@@ -131,8 +131,6 @@ export default function GuidedTour() {
     if (selectedTour.is_premium && !selectedTour.is_unlocked) { setShowPremiumCheckout(true); return; }
     setTourStarted((value) => !value);
   };
-  const advance = () => { if (currentPOIIndex < orderedPOIs.length - 1) setCurrentPOIIndex((value) => value + 1); };
-  const recenter = () => { const point = routePoints[Math.min(currentPOIIndex, routePoints.length - 1)]; if (point) setMockLocation(point[0], point[1]); };
   const filteredTours = tours.filter((tour) => !search || `${tour.name} ${descriptionOf(tour)}`.toLowerCase().includes(search.toLowerCase()));
 
   if (loading) return <SketchFrame active="tours" searchPlaceholder="TÌM HÀNH TRÌNH HOẶC TRẠM..." hideTopbar={true}><div className="tour-page tour-loading"><div className="tour-loading-mark">NF</div><p>{t('tour.loadingTours')}</p></div></SketchFrame>;
@@ -195,13 +193,6 @@ export default function GuidedTour() {
           </div>
         ))}
       </div>
-      <details className="prototype-tools">
-        <summary>Tình huống thử nghiệm</summary>
-        <div className="prototype-actions">
-          <button className="sketch-btn sketch-btn-outline" onClick={advance}>Vào geofence kế tiếp</button>
-          <button className="sketch-btn sketch-btn-outline" onClick={recenter}>Định vị lại</button>
-        </div>
-      </details>
     </div>
   </>;
 
@@ -427,8 +418,7 @@ export default function GuidedTour() {
               </div>
               {offRoute && (
                 <div className="tour-offroute is-visible" id="offroute">
-                  <div><strong>[CẢNH BÁO] Bạn đã lệch khỏi tuyến</strong><span>GPS vẫn hoạt động · Chạm định vị lại</span></div>
-                  <button className="sketch-btn sketch-btn-outline" id="recenter" onClick={recenter}>Định vị lại</button>
+                  <div><strong>[CẢNH BÁO] Bạn đã lệch khỏi tuyến</strong><span>GPS vẫn hoạt động</span></div>
                 </div>
               )}
               <div className="tour-map-controls">
@@ -500,7 +490,6 @@ export default function GuidedTour() {
               {offRoute && (
                 <div className="offroute is-visible">
                   <div><strong>[CẢNH BÁO] Bạn đã lệch khỏi tuyến</strong><span>GPS vẫn hoạt động</span></div>
-                  <button className="sketch-btn sketch-btn-outline" onClick={recenter}>Định vị lại</button>
                 </div>
               )}
               <div className="mobile-map-footer">
