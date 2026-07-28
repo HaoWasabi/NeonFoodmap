@@ -89,14 +89,34 @@ export default function QRScanOverlay({ onClose, onScanSuccess }: QRScanOverlayP
         return null;
     };
 
+    const stopAllCameraTracks = useCallback(() => {
+        try {
+            const videoEl = document.querySelector('#bcsd-qr-reader video') as HTMLVideoElement | null;
+            if (videoEl && videoEl.srcObject) {
+                const stream = videoEl.srcObject as MediaStream;
+                stream.getTracks().forEach((track) => track.stop());
+                videoEl.srcObject = null;
+            }
+        } catch {
+            // ignore
+        }
+    }, []);
+
     const handleQRResult = useCallback(async (decodedText: string) => {
         if (processedRef.current) return;
         processedRef.current = true;
         setScanOk(true);
 
+        // Dừng camera ngay khi có kết quả
         if (html5QrRef.current && html5QrRef.current.isScanning) {
-            html5QrRef.current.stop().catch(() => {});
+            try {
+                await html5QrRef.current.stop();
+            } catch {
+                // ignore
+            }
         }
+        // Force release media tracks
+        stopAllCameraTracks();
 
         try {
             let poi;
@@ -131,7 +151,7 @@ export default function QRScanOverlay({ onClose, onScanSuccess }: QRScanOverlayP
             };
             await handlePOI(mockPoi);
         }
-    }, [handlePOI]);
+    }, [handlePOI, stopAllCameraTracks]);
 
     useEffect(() => {
         // Guard chống StrictMode double-invoke
@@ -139,10 +159,15 @@ export default function QRScanOverlay({ onClose, onScanSuccess }: QRScanOverlayP
         startedRef.current = true;
 
         const containerId = 'bcsd-qr-reader';
+        let unmounted = false;
 
         const startCamera = async () => {
             try {
                 const { Html5Qrcode } = await import('html5-qrcode');
+
+                // Nếu component đã unmount trước khi import xong thì không start
+                if (unmounted) return;
+
                 const html5Qr = new Html5Qrcode(containerId);
                 html5QrRef.current = html5Qr;
 
@@ -152,20 +177,49 @@ export default function QRScanOverlay({ onClose, onScanSuccess }: QRScanOverlayP
                     (decodedText) => handleQRResult(decodedText),
                     () => { /* ignore frame failures */ }
                 );
+
+                // Nếu component unmount trong lúc start, dừng ngay
+                if (unmounted) {
+                    html5Qr.stop().catch(() => {});
+                }
             } catch {
-                setCameraError(true);
+                if (!unmounted) setCameraError(true);
             }
         };
 
         startCamera();
 
         return () => {
-            if (html5QrRef.current) {
-                if (html5QrRef.current.isScanning) {
-                    html5QrRef.current.stop().catch(() => {});
+            unmounted = true;
+            startedRef.current = false;
+
+            const stopCamera = async () => {
+                // 1. Dừng qua thư viện html5-qrcode
+                if (html5QrRef.current) {
+                    try {
+                        if (html5QrRef.current.isScanning) {
+                            await html5QrRef.current.stop();
+                        }
+                    } catch {
+                        // ignore stop errors
+                    }
+                    html5QrRef.current = null;
                 }
-                html5QrRef.current = null;
-            }
+
+                // 2. Force release tất cả camera media tracks để đảm bảo camera tắt
+                try {
+                    const videoEl = document.querySelector(`#${containerId} video`) as HTMLVideoElement | null;
+                    if (videoEl && videoEl.srcObject) {
+                        const stream = videoEl.srcObject as MediaStream;
+                        stream.getTracks().forEach((track) => track.stop());
+                        videoEl.srcObject = null;
+                    }
+                } catch {
+                    // ignore
+                }
+            };
+
+            stopCamera();
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -200,13 +254,22 @@ export default function QRScanOverlay({ onClose, onScanSuccess }: QRScanOverlayP
                 ).catch(() => setCameraError(true));
             }
 
-            const errorMsg = t('qr.invalidFile') || 'Không thể đọc mã QR từ ảnh này. Vui lòng chọn ảnh rõ nét hơn hoặc có độ tương phản tốt hơn.';
+            const errorMsg = t('Invalid File!') || 'Không thể đọc mã QR từ ảnh này.';
             alert(errorMsg);
         } finally {
             // Reset input so the same file can be selected again if needed
             e.target.value = '';
         }
     };
+
+    const handleClose = useCallback(() => {
+        // Dừng camera trước khi unmount để đảm bảo release ngay
+        if (html5QrRef.current && html5QrRef.current.isScanning) {
+            html5QrRef.current.stop().catch(() => {});
+        }
+        stopAllCameraTracks();
+        onClose();
+    }, [onClose, stopAllCameraTracks]);
 
     return (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-between text-white overflow-hidden bg-black">
@@ -230,7 +293,7 @@ export default function QRScanOverlay({ onClose, onScanSuccess }: QRScanOverlayP
 
             {/* Top nav */}
             <div className="relative z-20 w-full flex items-center justify-between p-6">
-                <button onClick={onClose} className="btn btn-ghost text-white border-white/20 hover:border-primary flex items-center gap-2">
+                <button onClick={handleClose} className="btn btn-ghost text-white border-white/20 hover:border-primary flex items-center gap-2">
                     <span className="material-symbols-outlined">arrow_back</span>
                     <span className="t-body font-bold">{t('common.cancel')}</span>
                 </button>
