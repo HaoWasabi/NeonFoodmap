@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import maplibregl, { type Map as MapLibreMap, type Marker as MapLibreMarker } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { useTranslation } from 'react-i18next';
 import type { POI } from '../types';
 
 interface InteractiveMapProps {
@@ -73,11 +74,11 @@ function SketchIcon({ name }: { name: 'plus' | 'minus' | 'locate' | '3d' }) {
     return <svg className="fmap002-icon" viewBox="0 0 24 24" aria-hidden="true">{iconPath(name)}</svg>;
 }
 
-function createPoiMarker(poi: POI, isFeatured: boolean, onOpenPoi: (poi: POI) => void): HTMLElement {
+function createPoiMarker(poi: POI, isFeatured: boolean, onOpenPoi: (poi: POI) => void, t: (key: string) => string): HTMLElement {
     const element = document.createElement('button');
     element.type = 'button';
     element.className = `fmap002-map-marker${isFeatured ? ' is-featured' : ''}`;
-    element.setAttribute('aria-label', `Mở địa điểm ${poi.translated_name || poi.name}`);
+    element.setAttribute('aria-label', `${t('interactiveMap.openLocation')} ${poi.translated_name || poi.name}`);
     element.innerHTML = `<span class="fmap002-map-marker__core"></span><span class="fmap002-map-marker__label">${escapeHtml((poi.translated_name || poi.name).toLocaleUpperCase('vi').slice(0, 22))}</span>`;
     element.addEventListener('click', (event) => {
         event.stopPropagation();
@@ -136,6 +137,7 @@ export default function InteractiveMap({
     onMapClick,
     onLocate,
 }: InteractiveMapProps) {
+    const { t } = useTranslation();
     const containerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<MapLibreMap | null>(null);
     const poiMarkersRef = useRef<MapLibreMarker[]>([]);
@@ -271,7 +273,7 @@ export default function InteractiveMap({
         poiMarkersRef.current = mappablePois.map((poi) => {
             const coordinates = getPoiCoordinates(poi);
             return new maplibregl.Marker({
-                element: createPoiMarker(poi, poi.id === featuredPoi?.id, callbacksRef.current.onOpenPoi),
+                element: createPoiMarker(poi, poi.id === featuredPoi?.id, callbacksRef.current.onOpenPoi, t),
                 anchor: 'center',
             }).setLngLat(coordinates || DEFAULT_CENTER).addTo(map);
         });
@@ -325,30 +327,30 @@ export default function InteractiveMap({
 
     return (
         <div className={`fmap002-map${mode === 'tilt' ? ' is-tilt' : ''}`}>
-            <div aria-label="Bản đồ thật OpenStreetMap 2.5D" className="fmap002-map-viewport" ref={containerRef} />
+            <div aria-label={t('interactiveMap.mapViewport')} className="fmap002-map-viewport" ref={containerRef} />
             <div className="fmap002-map-vignette" aria-hidden="true" />
             {mapError && (
                 <div className="fmap002-map-error" role="status">
                     <strong>REAL MAP OFFLINE</strong>
-                    <span>Không tải được tile OpenFreeMap. Kiểm tra kết nối để xem nhà 2.5D.</span>
+                    <span>{t('interactiveMap.mapOfflineError')}</span>
                 </div>
             )}
 
-            <div aria-label="Góc nhìn bản đồ" className="fmap002-map-mode-toggle">
+            <div aria-label={t('interactiveMap.viewMode')} className="fmap002-map-mode-toggle">
                 <button className={`fmap002-map-mode-button${mode === 'flat' ? ' is-active' : ''}`} type="button" onClick={(event) => { stopOverlayEvent(event); setMode('flat'); }}>2D FLAT</button>
                 <button className={`fmap002-map-mode-button${mode === 'tilt' ? ' is-active' : ''}`} type="button" onClick={(event) => { stopOverlayEvent(event); setMode('tilt'); }}>2.5D TILT</button>
             </div>
-            <div aria-label="Thực thể 3D" className="fmap002-map-entity-toggle">
-                <button aria-label="Tắt bật 3D" className={`fmap002-icon-button${show3dEntity ? ' is-active' : ''}`} type="button" onClick={(event) => { stopOverlayEvent(event); setShow3dEntity(!show3dEntity); }}><SketchIcon name="3d" /></button>
+            <div aria-label={t('interactiveMap.entity3D')} className="fmap002-map-entity-toggle">
+                <button aria-label={t('interactiveMap.toggle3D')} className={`fmap002-icon-button${show3dEntity ? ' is-active' : ''}`} type="button" onClick={(event) => { stopOverlayEvent(event); setShow3dEntity(!show3dEntity); }}><SketchIcon name="3d" /></button>
             </div>
-            <div aria-label="Điều khiển bản đồ" className="fmap002-map-toolbar">
-                <button aria-label="Phóng to" className="fmap002-icon-button" type="button" onClick={(event) => { stopOverlayEvent(event); mapRef.current?.zoomIn({ duration: 260 }); }}><SketchIcon name="plus" /></button>
-                <button aria-label="Thu nhỏ" className="fmap002-icon-button" type="button" onClick={(event) => { stopOverlayEvent(event); mapRef.current?.zoomOut({ duration: 260 }); }}><SketchIcon name="minus" /></button>
-                <button aria-label="Về vị trí của tôi" className="fmap002-icon-button" type="button" onClick={(event) => { stopOverlayEvent(event); onLocate(); }}><SketchIcon name="locate" /></button>
+            <div aria-label={t('interactiveMap.mapControls')} className="fmap002-map-toolbar">
+                <button aria-label={t('interactiveMap.zoomIn')} className="fmap002-icon-button" type="button" onClick={(event) => { stopOverlayEvent(event); mapRef.current?.zoomIn({ duration: 260 }); }}><SketchIcon name="plus" /></button>
+                <button aria-label={t('interactiveMap.zoomOut')} className="fmap002-icon-button" type="button" onClick={(event) => { stopOverlayEvent(event); mapRef.current?.zoomOut({ duration: 260 }); }}><SketchIcon name="minus" /></button>
+                <button aria-label={t('interactiveMap.myLocation')} className="fmap002-icon-button" type="button" onClick={(event) => { stopOverlayEvent(event); onLocate(); }}><SketchIcon name="locate" /></button>
             </div>
             <div className="fmap002-map-legend">
                 <span className="fmap002-legend-code">POI {String(featuredPoi ? Math.max(1, mapPois.indexOf(featuredPoi) + 1) : 2).padStart(2, '0')}</span>
-                <span className="fmap002-legend-copy"><span>GEOFENCE ACTIVE</span><strong>Chạm marker để mở toàn màn hình địa điểm</strong></span>
+                <span className="fmap002-legend-copy"><span>GEOFENCE ACTIVE</span><strong>{t('interactiveMap.tapMarkerInstruction')}</strong></span>
                 <span className="fmap002-legend-distance">{featuredDistance} M</span>
             </div>
         </div>

@@ -48,29 +48,29 @@ export default function PremiumTourCheckout({ tour, onClose, onSuccess }: Premiu
         <div className="scrim is-visible" onClick={onClose} style={{ zIndex: 9999 }}>
             <section className="modal" onClick={e => e.stopPropagation()}>
                 <div className="modal-head">
-                    <h2 id="checkoutTitle">Mở khóa hành trình</h2>
-                    <button className="sketch-icon-button" onClick={onClose} aria-label="Đóng">×</button>
+                    <h2 id="checkoutTitle">{t('checkout.unlockTourTitle')}</h2>
+                    <button className="sketch-icon-button" onClick={onClose} aria-label={t('common.close')}>×</button>
                 </div>
                 <div className="checkout-body">
-                    <span className="sketch-chip sketch-chip-tertiary">Premium</span>
+                    <span className="sketch-chip sketch-chip-tertiary">{t('tour.premium')}</span>
                     <h3 className="plan-title" style={{ fontSize: '1.8rem', margin: '14px 0 8px' }}>{tourName}</h3>
                     <p style={{ color: 'var(--sk-muted)', fontSize: '.84rem', lineHeight: 1.5, margin: 0 }}>
-                        Mở toàn bộ trạm, audio thuyết minh chuyên nghiệp và bản tải ngoại tuyến cho hành trình này.
+                        {t('checkout.unlockDescription')}
                     </p>
 
                     <div className="checkout-summary">
                         <div className="checkout-row">
-                            <span>Nội dung mở khóa</span>
-                            <strong>{String(tour.pois?.length || 0).padStart(2, '0')} TRẠM</strong>
+                            <span>{t('checkout.unlockContent')}</span>
+                            <strong>{String(tour.pois?.length || 0).padStart(2, '0')} {t('tour.stopsUppercase')}</strong>
                         </div>
                         <div className="checkout-row">
-                            <span>Thời hạn</span>
-                            <strong>VĨNH VIỄN</strong>
+                            <span>{t('checkout.duration')}</span>
+                            <strong>{t('checkout.forever')}</strong>
                         </div>
                     </div>
 
                     <div className="checkout-total">
-                        <span>Tổng thanh toán</span>
+                        <span>{t('checkout.totalPayment')}</span>
                         <strong>{price} VND</strong>
                     </div>
 
@@ -81,7 +81,7 @@ export default function PremiumTourCheckout({ tour, onClose, onSuccess }: Premiu
                             className="sketch-btn sketch-btn-tertiary plan-primary"
                             style={{ width: '100%', minHeight: '48px' }}
                         >
-                            {paying ? 'Đang khởi tạo...' : 'Tiếp tục thanh toán PayPal'}
+                            {paying ? t('checkout.initializing') : t('checkout.continuePaypal')}
                         </button>
                     )}
 
@@ -118,13 +118,13 @@ export default function PremiumTourCheckout({ tour, onClose, onSuccess }: Premiu
                     {step === 'done' && (
                         <div style={{ textAlign: 'center', padding: '16px 0' }}>
                             <strong style={{ display: 'block', fontSize: '1.2rem', color: 'var(--sk-primary)', marginBottom: 6 }}>
-                                Mở khóa thành công!
+                                {t('checkout.unlockSuccess')}
                             </strong>
                             <p style={{ fontSize: '.8rem', color: 'var(--sk-muted)', margin: 0 }}>
-                                Bạn có thể bắt đầu tour premium ngay bây giờ.
+                                {t('checkout.unlockSuccessDesc')}
                             </p>
                             <button className="sketch-btn sketch-btn-primary" style={{ width: '100%', marginTop: 16 }} onClick={onClose}>
-                                Bắt đầu Tour
+                                {t('checkout.startTourBtn')}
                             </button>
                         </div>
                     )}
@@ -135,7 +135,7 @@ export default function PremiumTourCheckout({ tour, onClose, onSuccess }: Premiu
                         </div>
                     )}
 
-                    <p className="modal-note">Thanh toán an toàn qua cổng PayPal. Môi trường thử nghiệm không trừ tiền thật.</p>
+                    <p className="modal-note">{t('checkout.securePayment')}</p>
                 </div>
             </section>
         </div>,

@@ -133,8 +133,8 @@ export default function GuidedTour() {
   };
   const filteredTours = tours.filter((tour) => !search || `${tour.name} ${descriptionOf(tour)}`.toLowerCase().includes(search.toLowerCase()));
 
-  if (loading) return <SketchFrame active="tours" searchPlaceholder="TÌM HÀNH TRÌNH HOẶC TRẠM..." hideTopbar={true}><div className="tour-page tour-loading"><div className="tour-loading-mark">NF</div><p>{t('tour.loadingTours')}</p></div></SketchFrame>;
-  if (!selectedTour) return <SketchFrame active="tours" searchPlaceholder="TÌM HÀNH TRÌNH HOẶC TRẠM..." hideTopbar={true}><div className="tour-page tour-empty"><h1>{t('tour.noTours')}</h1><p>{t('tour.downloadOfflinePrompt')}</p></div></SketchFrame>;
+  if (loading) return <SketchFrame active="tours" searchPlaceholder={t('tour.searchPlaceholder')} hideTopbar={true}><div className="tour-page tour-loading"><div className="tour-loading-mark">NF</div><p>{t('tour.loadingTours')}</p></div></SketchFrame>;
+  if (!selectedTour) return <SketchFrame active="tours" searchPlaceholder={t('tour.searchPlaceholder')} hideTopbar={true}><div className="tour-page tour-empty"><h1>{t('tour.noTours')}</h1><p>{t('tour.downloadOfflinePrompt')}</p></div></SketchFrame>;
 
   const completed = Math.min(currentPOIIndex, orderedPOIs.length);
   const progress = orderedPOIs.length ? Math.round(completed / orderedPOIs.length * 100) : 0;
@@ -199,8 +199,8 @@ export default function GuidedTour() {
 
   const renderRoute = () => <>
     <div className="route-tab-head">
-      <h2>Lộ trình chi tiết</h2>
-      <p id="ledgerTitle">{titleOf(selectedTour)} · {orderedPOIs.length} trạm</p>
+      <h2>{t('tour.routeDetailHeader')}</h2>
+      <p id="ledgerTitle">{titleOf(selectedTour)} · {orderedPOIs.length} {t('tour.stopsLower')}</p>
     </div>
     <div className="ledger-scroll" id="ledgerList">
       {orderedPOIs.map((item, index) => {
@@ -214,9 +214,9 @@ export default function GuidedTour() {
               <span>{item.poi.category} · {estimateAudio(item.poi.description)}</span>
             </div>
             <div className="ledger-end">
-              {locked ? <button className="sketch-btn sketch-btn-tertiary" onClick={() => setShowPremiumCheckout(true)}>Mở khóa</button>
-                : status === 'current' ? <button className="sketch-btn sketch-btn-primary" onClick={() => startNarration(item.poi)}>Phát</button>
-                  : status === 'done' ? '✓' : `${index * 120 + 180} M`}
+              {locked ? <button className="sketch-btn sketch-btn-tertiary" onClick={() => setShowPremiumCheckout(true)}>{t('tour.unlock')}</button>
+                : status === 'current' ? <button className="sketch-btn sketch-btn-primary" onClick={() => startNarration(item.poi)}>{t('tour.play')}</button>
+                  : status === 'done' ? t('tour.done') : `${index * 120 + 180} ${t('tour.metersShort')}`}
             </div>
           </article>
         );
@@ -227,14 +227,14 @@ export default function GuidedTour() {
 
   const renderReviews = () => <>
     <div className="review-tab-head">
-      <h2>Đánh giá du khách</h2>
-      <p>Tín hiệu chất lượng từ những người đã hoàn thành hành trình.</p>
+      <h2>{t('tour.guestReviews')}</h2>
+      <p>{t('tour.reviewsDesc')}</p>
     </div>
     <div className="review-scroll" data-review-content>
       <div className="rating-overview">
         <div className="rating-score">
           <strong>{stats.average.toFixed(1)}</strong>
-          <span>NGOÀI {stats.total} ĐÁNH GIÁ</span>
+          <span>{t('tour.outOfCount')} {stats.total} {t('tour.reviewsUpper')}</span>
         </div>
         <div className="rating-bars">
           {[5, 4, 3, 2, 1].map((star) => {
@@ -262,11 +262,11 @@ export default function GuidedTour() {
             </article>
           ))
         ) : (
-          <p className="plan-intro" style={{ marginTop: 15 }}>Chưa có đánh giá.</p>
+          <p className="plan-intro" style={{ marginTop: 15 }}>{t('tour.noReviews')}</p>
         )}
       </div>
       <div className="review-cta">
-        <button className="sketch-btn sketch-btn-outline" style={{ width: '100%' }} onClick={() => setShowReviewForm(true)}>Viết đánh giá</button>
+        <button className="sketch-btn sketch-btn-outline" style={{ width: '100%' }} onClick={() => setShowReviewForm(true)}>{t('review.writeReview')}</button>
       </div>
     </div>
   </>;
@@ -274,27 +274,27 @@ export default function GuidedTour() {
 
   const renderOverviewMobile = () => <>
     <div className="mobile-kicker">
-      <div><span className={`sketch-chip ${selectedTour.is_premium ? 'sketch-chip-tertiary' : 'sketch-chip-secondary'}`}>{selectedTour.is_premium ? 'Premium' : 'Miễn phí'}</span></div>
-      <button onClick={() => setShowChooser(true)}>Đổi hành trình</button>
+      <div><span className={`sketch-chip ${selectedTour.is_premium ? 'sketch-chip-tertiary' : 'sketch-chip-secondary'}`}>{selectedTour.is_premium ? t('tour.premium') : t('tour.free')}</span></div>
+      <button onClick={() => setShowChooser(true)}>{t('tour.changeTour')}</button>
     </div>
     <h1 className="mobile-title">{titleOf(selectedTour)}</h1>
     <p className="mobile-intro">{descriptionOf(selectedTour)}</p>
     <div className="mobile-metrics">
-      <div><span>Chiều dài</span><strong>1.8 KM</strong></div>
-      <div><span>Thời gian</span><strong>{selectedTour.estimated_duration_min || 45} PHÚT</strong></div>
-      <div><span>Số trạm</span><strong>{String(orderedPOIs.length).padStart(2, '0')} TRẠM</strong></div>
+      <div><span>{t('tour.length')}</span><strong>1.8 KM</strong></div>
+      <div><span>{t('tour.time')}</span><strong>{selectedTour.estimated_duration_min || 45} {t('tour.minutesUppercase')}</strong></div>
+      <div><span>{t('tour.stops')}</span><strong>{String(orderedPOIs.length).padStart(2, '0')} {t('tour.stopsUppercase')}</strong></div>
     </div>
     <button className="sketch-btn sketch-btn-primary" style={{ width: '100%', marginTop: 14 }} onClick={primaryAction}>
-      {selectedTour.is_premium && !selectedTour.is_unlocked ? 'Mở khóa' : tourStarted ? 'Kết thúc' : 'Bắt đầu hành trình'}
+      {selectedTour.is_premium && !selectedTour.is_unlocked ? t('tour.unlock') : tourStarted ? t('tour.end') : t('tour.startTour')}
     </button>
     <div className="mobile-focus">
       {nextPOI ? (
         <>
-          <span className="sketch-label">{tourStarted ? 'Đang đến gần' : 'Trạm hiện tại'}</span>
+          <span className="sketch-label">{tourStarted ? t('tour.approaching') : t('tour.currentStop')}</span>
           <strong>{poiTitle(nextPOI)}</strong>
-          <span>+{distanceToNext ?? '—'} M · AUDIO {estimateAudio(nextPOI.description)}</span>
+          <span>+{distanceToNext ?? '—'} {t('tour.metersShort')} · AUDIO {estimateAudio(nextPOI.description)}</span>
         </>
-      ) : <p className="mobile-intro">Đã hoàn tất hành trình.</p>}
+      ) : <p className="mobile-intro">{t('tour.finishedTour')}</p>}
     </div>
     <div className="mobile-next">
       {orderedPOIs.slice(currentPOIIndex + 1, currentPOIIndex + 3).map((item, offset) => (
@@ -304,7 +304,7 @@ export default function GuidedTour() {
             <strong>{poiTitle(item.poi)}</strong>
             <span>{item.poi.category} · {estimateAudio(item.poi.description)}</span>
           </div>
-          <span className="next-row-end">{distanceToNext ? `+${distanceToNext} M` : 'UP'}</span>
+          <span className="next-row-end">{distanceToNext ? `+${distanceToNext} ${t('tour.metersShort')}` : t('tour.upShort')}</span>
         </div>
       ))}
     </div>
@@ -313,7 +313,7 @@ export default function GuidedTour() {
 
   const renderRouteMobile = () => <>
     <div className="mobile-route-head">
-      <h2>Lộ trình</h2>
+      <h2>{t('tour.tabRoute')}</h2>
       <p>{titleOf(selectedTour)}</p>
     </div>
     {orderedPOIs.map((item, index) => {
@@ -327,9 +327,9 @@ export default function GuidedTour() {
             <span>{item.poi.category}</span>
           </div>
           <div className="ledger-end">
-            {locked ? <button className="sketch-btn sketch-btn-tertiary" onClick={() => setShowPremiumCheckout(true)}>Mở khóa</button>
-              : status === 'current' ? <button className="sketch-btn sketch-btn-primary" onClick={() => startNarration(item.poi)}>Phát</button>
-                : status === 'done' ? '✓' : `${index * 120 + 180} M`}
+            {locked ? <button className="sketch-btn sketch-btn-tertiary" onClick={() => setShowPremiumCheckout(true)}>{t('tour.unlock')}</button>
+              : status === 'current' ? <button className="sketch-btn sketch-btn-primary" onClick={() => startNarration(item.poi)}>{t('tour.play')}</button>
+                : status === 'done' ? t('tour.done') : `${index * 120 + 180} ${t('tour.metersShort')}`}
           </div>
         </div>
       );
@@ -339,13 +339,13 @@ export default function GuidedTour() {
 
   const renderReviewsMobile = () => <>
     <div className="mobile-review-head">
-      <h2>Đánh giá du khách</h2>
-      <p>Tín hiệu chất lượng từ những người đã hoàn thành hành trình.</p>
+      <h2>{t('tour.guestReviews')}</h2>
+      <p>{t('tour.reviewsDesc')}</p>
     </div>
     <div className="rating-overview">
       <div className="rating-score">
         <strong>{stats.average.toFixed(1)}</strong>
-        <span>NGOÀI {stats.total} ĐÁNH GIÁ</span>
+        <span>{t('tour.outOfCount')} {stats.total} {t('tour.reviewsUpper')}</span>
       </div>
       <div className="rating-bars">
         {[5, 4, 3, 2, 1].map((star) => {
@@ -373,17 +373,17 @@ export default function GuidedTour() {
           </article>
         ))
       ) : (
-        <p className="mobile-intro" style={{ marginTop: 15 }}>Chưa có đánh giá.</p>
+        <p className="mobile-intro" style={{ marginTop: 15 }}>{t('tour.noReviews')}</p>
       )}
     </div>
     <div className="review-cta" style={{ marginTop: 18 }}>
-      <button className="sketch-btn sketch-btn-outline" style={{ width: '100%' }} onClick={() => setShowReviewForm(true)}>Viết đánh giá sau hành trình</button>
+      <button className="sketch-btn sketch-btn-outline" style={{ width: '100%' }} onClick={() => setShowReviewForm(true)}>{t('tour.writeReviewAfter')}</button>
     </div>
   </>;
 
 
   return (
-    <SketchFrame active="tours" className="tour-frame" searchPlaceholder="TÌM HÀNH TRÌNH HOẶC TRẠM..." searchValue={search} onSearchChange={setSearch} routeMark={String(currentPOIIndex + 1).padStart(2, '0')} routeTitle={titleOf(selectedTour)} routeMeta={tourMeta} routeProgress={progress} hideTopbar={true}>
+    <SketchFrame active="tours" className="tour-frame" searchPlaceholder={t('tour.searchPlaceholder')} searchValue={search} onSearchChange={setSearch} routeMark={String(currentPOIIndex + 1).padStart(2, '0')} routeTitle={titleOf(selectedTour)} routeMeta={tourMeta} routeProgress={progress} hideTopbar={true}>
       <div className="tour-page">
         <style>{`
           .desktop-view { height: 100%; display: block; min-height: 0; }
@@ -410,40 +410,40 @@ export default function GuidedTour() {
 
               <div className="tour-map-summary" id="mapSummary">
                 <div className="map-summary-top">
-                  <span className="sketch-label">Lộ trình đang chọn</span>
-                  <span className={`sketch-chip ${selectedTour.is_premium ? 'sketch-chip-tertiary' : 'sketch-chip-secondary'}`} id="mapBadge">{selectedTour.is_premium ? 'Premium' : 'Miễn phí'}</span>
+                  <span className="sketch-label">{t('tour.selectedRoute')}</span>
+                  <span className={`sketch-chip ${selectedTour.is_premium ? 'sketch-chip-tertiary' : 'sketch-chip-secondary'}`} id="mapBadge">{selectedTour.is_premium ? t('tour.premium') : t('tour.free')}</span>
                 </div>
                 <h2 id="mapTourTitle">{titleOf(selectedTour)}</h2>
                 <p id="mapTourMeta">{tourMeta}</p>
               </div>
               {offRoute && (
                 <div className="tour-offroute is-visible" id="offroute">
-                  <div><strong>[CẢNH BÁO] Bạn đã lệch khỏi tuyến</strong><span>GPS vẫn hoạt động</span></div>
+                  <div><strong>{t('tour.offRouteWarning')}</strong><span>{t('tour.gpsActive')}</span></div>
                 </div>
               )}
               <div className="tour-map-controls">
-                <button className="sketch-icon-button" aria-label="Phóng to">+</button>
-                <button className="sketch-icon-button" aria-label="Thu nhỏ">−</button>
+                <button className="sketch-icon-button" aria-label={t('tour.zoomIn')}>+</button>
+                <button className="sketch-icon-button" aria-label={t('tour.zoomOut')}>−</button>
               </div>
               <div className="tour-map-footer">
-                <div className="tour-distance"><span className="sketch-label">Còn lại</span><strong id="mapDistance">{distanceToNext ?? '—'} M</strong></div>
-                <div className="tour-footer-copy"><span className="sketch-label" id="mapStepLabel">Trạm {String(Math.min(currentPOIIndex + 1, orderedPOIs.length)).padStart(2, '0')} / {String(orderedPOIs.length).padStart(2, '0')}</span><strong id="mapStopName">{nextPOI ? poiTitle(nextPOI) : 'Đã hoàn tất hành trình'}</strong></div>
-                <div className="tour-footer-action"><button className="sketch-btn sketch-btn-outline" onClick={() => setShowMap(true)}>Xem các trạm</button></div>
+                <div className="tour-distance"><span className="sketch-label">{t('tour.remaining')}</span><strong id="mapDistance">{distanceToNext ?? '—'} {t('tour.metersShort')}</strong></div>
+                <div className="tour-footer-copy"><span className="sketch-label" id="mapStepLabel">{t('tour.stopLabel')} {String(Math.min(currentPOIIndex + 1, orderedPOIs.length)).padStart(2, '0')} / {String(orderedPOIs.length).padStart(2, '0')}</span><strong id="mapStopName">{nextPOI ? poiTitle(nextPOI) : t('tour.finishedTour')}</strong></div>
+                <div className="tour-footer-action"><button className="sketch-btn sketch-btn-outline" onClick={() => setShowMap(true)}>{t('tour.viewStops')}</button></div>
               </div>
             </div>
 
-            <aside className="plan-pane" id="planPane" aria-label="Chi tiết hành trình">
-              <nav className="retractable-tabs" role="tablist" aria-label="Nội dung hành trình" aria-orientation="vertical" data-retractable-tabs="desktop">
+            <aside className="plan-pane" id="planPane" aria-label={t('tour.tourContent')}>
+              <nav className="retractable-tabs" role="tablist" aria-label={t('tour.tourContent')} aria-orientation="vertical" data-retractable-tabs="desktop">
                 <button className="retractable-tab" id="desktopTabOverview" role="tab" aria-selected={activeTab === 'overview'} aria-controls="desktopPanelOverview" tabIndex={activeTab === 'overview' ? 0 : -1} data-tour-tab="overview" data-tab-scope="desktop" onClick={() => setActiveTab('overview')}>
-                  <SketchIcon name="route" className="icon" /><span className="retractable-tab-label">Tổng quan</span><span className="retractable-tab-index">01</span>
+                  <SketchIcon name="route" className="icon" /><span className="retractable-tab-label">{t('tour.tabOverview')}</span><span className="retractable-tab-index">01</span>
                 </button>
                 <button className="retractable-tab" id="desktopTabRoute" role="tab" aria-selected={activeTab === 'route'} aria-controls="desktopPanelRoute" tabIndex={activeTab === 'route' ? 0 : -1} data-tour-tab="route" data-tab-scope="desktop" onClick={() => setActiveTab('route')}>
-                  <SketchIcon name="playlist" className="icon" /><span className="retractable-tab-label">Lộ trình</span><span className="retractable-tab-index">02</span>
+                  <SketchIcon name="playlist" className="icon" /><span className="retractable-tab-label">{t('tour.tabRoute')}</span><span className="retractable-tab-index">02</span>
                 </button>
                 <button className="retractable-tab" id="desktopTabReviews" role="tab" aria-selected={activeTab === 'reviews'} aria-controls="desktopPanelReviews" tabIndex={activeTab === 'reviews' ? 0 : -1} data-tour-tab="reviews" data-tab-scope="desktop" onClick={() => setActiveTab('reviews')}>
-                  <SketchIcon name="star" className="icon" /><span className="retractable-tab-label">Đánh giá</span><span className="retractable-tab-index">03</span>
+                  <SketchIcon name="star" className="icon" /><span className="retractable-tab-label">{t('tour.tabReviews')}</span><span className="retractable-tab-index">03</span>
                 </button>
-                <button className="panel-retract-toggle" id="desktopPanelToggle" aria-label="Thu gọn bảng chi tiết" aria-expanded={!panelRetracted} aria-controls="tourTabPanels" onClick={() => setPanelRetracted(!panelRetracted)}>
+                <button className="panel-retract-toggle" id="desktopPanelToggle" aria-label={t('tour.tourDetailsCollapse')} aria-expanded={!panelRetracted} aria-controls="tourTabPanels" onClick={() => setPanelRetracted(!panelRetracted)}>
                   <SketchIcon name={panelRetracted ? 'chevron-right' : 'chevron-left'} className="icon" />
                 </button>
               </nav>
@@ -485,31 +485,31 @@ export default function GuidedTour() {
 
               <div className="mobile-map-card">
                 <strong>{titleOf(selectedTour)}</strong>
-                <span className={`sketch-chip ${selectedTour.is_premium ? 'sketch-chip-tertiary' : 'sketch-chip-secondary'}`}>{selectedTour.is_premium ? 'Premium' : 'Miễn phí'}</span>
+                <span className={`sketch-chip ${selectedTour.is_premium ? 'sketch-chip-tertiary' : 'sketch-chip-secondary'}`}>{selectedTour.is_premium ? t('tour.premium') : t('tour.free')}</span>
               </div>
               {offRoute && (
                 <div className="offroute is-visible">
-                  <div><strong>[CẢNH BÁO] Bạn đã lệch khỏi tuyến</strong><span>GPS vẫn hoạt động</span></div>
+                  <div><strong>{t('tour.offRouteWarning')}</strong><span>{t('tour.gpsActive')}</span></div>
                 </div>
               )}
               <div className="mobile-map-footer">
-                <div><span className="sketch-label">Còn lại</span><strong>{distanceToNext ?? '—'} M</strong></div>
-                <div><span className="sketch-label">Trạm {String(Math.min(currentPOIIndex + 1, orderedPOIs.length)).padStart(2, '0')} / {String(orderedPOIs.length).padStart(2, '0')}</span><strong>{nextPOI ? poiTitle(nextPOI) : 'Hoàn tất'}</strong></div>
+                <div><span className="sketch-label">{t('tour.remaining')}</span><strong>{distanceToNext ?? '—'} {t('tour.metersShort')}</strong></div>
+                <div><span className="sketch-label">{t('tour.stopLabel')} {String(Math.min(currentPOIIndex + 1, orderedPOIs.length)).padStart(2, '0')} / {String(orderedPOIs.length).padStart(2, '0')}</span><strong>{nextPOI ? poiTitle(nextPOI) : t('tour.finishedTour')}</strong></div>
               </div>
             </section>
 
             <div className="mobile-tab-shell">
-              <nav className="mobile-tabs" role="tablist" aria-label="Nội dung hành trình" aria-orientation="horizontal" data-retractable-tabs="mobile">
+              <nav className="mobile-tabs" role="tablist" aria-label={t('tour.tourContent')} aria-orientation="horizontal" data-retractable-tabs="mobile">
                 <button className="mobile-tab" id="mobileTabOverview" role="tab" aria-selected={activeTab === 'overview'} aria-controls="mobilePanelOverview" tabIndex={activeTab === 'overview' ? 0 : -1} data-tour-tab="overview" data-tab-scope="mobile" onClick={() => setActiveTab('overview')}>
-                  <SketchIcon name="route" className="icon" /> Tổng quan
+                  <SketchIcon name="route" className="icon" /> {t('tour.tabOverview')}
                 </button>
                 <button className="mobile-tab" id="mobileTabRoute" role="tab" aria-selected={activeTab === 'route'} aria-controls="mobilePanelRoute" tabIndex={activeTab === 'route' ? 0 : -1} data-tour-tab="route" data-tab-scope="mobile" onClick={() => setActiveTab('route')}>
-                  <SketchIcon name="playlist" className="icon" /> Lộ trình
+                  <SketchIcon name="playlist" className="icon" /> {t('tour.tabRoute')}
                 </button>
                 <button className="mobile-tab" id="mobileTabReviews" role="tab" aria-selected={activeTab === 'reviews'} aria-controls="mobilePanelReviews" tabIndex={activeTab === 'reviews' ? 0 : -1} data-tour-tab="reviews" data-tab-scope="mobile" onClick={() => setActiveTab('reviews')}>
-                  <SketchIcon name="star" className="icon" /> Đánh giá
+                  <SketchIcon name="star" className="icon" /> {t('tour.tabReviews')}
                 </button>
-                <button className="mobile-panel-toggle" id="mobilePanelToggle" aria-label="Thu gọn bảng chi tiết" aria-expanded={!mobilePanelRetracted} aria-controls="mobileTabPanels" onClick={() => setMobilePanelRetracted(!mobilePanelRetracted)}>
+                <button className="mobile-panel-toggle" id="mobilePanelToggle" aria-label={t('tour.tourDetailsCollapse')} aria-expanded={!mobilePanelRetracted} aria-controls="mobileTabPanels" onClick={() => setMobilePanelRetracted(!mobilePanelRetracted)}>
                   <SketchIcon name={mobilePanelRetracted ? 'chevron-up' : 'chevron-down'} className="icon" />
                 </button>
               </nav>
@@ -534,15 +534,15 @@ export default function GuidedTour() {
         <div className="scrim is-visible" role="dialog" aria-modal="true" style={{ zIndex: 9999 }}>
           <div className="modal">
             <div className="modal-head">
-              <h2>Chọn hành trình</h2>
-              <button className="sketch-icon-button" onClick={() => setShowChooser(false)} aria-label="Đóng">×</button>
+              <h2>{t('tour.chooseTour')}</h2>
+              <button className="sketch-icon-button" onClick={() => setShowChooser(false)} aria-label={t('common.close')}>×</button>
             </div>
             <div className="tour-options">
               {filteredTours.map((tour) => (
                 <button className="tour-option" key={tour.id} onClick={() => selectTour(tour)}>
                   <span className="tour-option-no">{String(tours.indexOf(tour) + 1).padStart(2, '0')}</span>
-                  <span><strong>{titleOf(tour)}</strong><small>{tour.estimated_duration_min || 45} phút · {tour.pois.length} trạm</small></span>
-                  <span className={`sketch-chip ${tour.is_premium ? 'sketch-chip-tertiary' : 'sketch-chip-secondary'}`}>{tour.is_premium ? 'Premium' : 'Free'}</span>
+                  <span><strong>{titleOf(tour)}</strong><small>{tour.estimated_duration_min || 45} {t('common.minutes')} · {tour.pois.length} {t('tour.stopsLower')}</small></span>
+                  <span className={`sketch-chip ${tour.is_premium ? 'sketch-chip-tertiary' : 'sketch-chip-secondary'}`}>{tour.is_premium ? t('tour.premium') : t('tour.free')}</span>
                 </button>
               ))}
             </div>
@@ -553,8 +553,8 @@ export default function GuidedTour() {
         <div className="scrim is-visible" role="dialog" aria-modal="true" style={{ zIndex: 9999 }}>
           <div className="modal">
             <div className="modal-head">
-              <h2>Bản đồ hành trình</h2>
-              <button className="sketch-icon-button" onClick={() => setShowMap(false)} aria-label="Đóng">×</button>
+              <h2>{t('tour.tourMap')}</h2>
+              <button className="sketch-icon-button" onClick={() => setShowMap(false)} aria-label={t('common.close')}>×</button>
             </div>
             <div style={{ height: '60vh', position: 'relative' }}>
 

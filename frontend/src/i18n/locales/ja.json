@@ -242,5 +242,103 @@
     "anonymous": "観光客",
     "errorNoRating": "星の評価を選択してください。",
     "errorSubmit": "エラーが発生しました。もう一度お試しください。"
+  },
+  "interactiveMap": {
+    "openLocation": "場所を開く",
+    "mapViewport": "リアルOpenStreetMap 2.5D地図",
+    "mapOfflineError": "OpenFreeMapタイルを読み込めませんでした。接続を確認して2.5D建物を表示してください。",
+    "viewMode": "地図ビュー角度",
+    "entity3D": "3Dエンティティ",
+    "toggle3D": "3D切り替え",
+    "mapControls": "地図コントロール",
+    "zoomIn": "ズームイン",
+    "zoomOut": "ズームアウト",
+    "myLocation": "現在地に戻る",
+    "tapMarkerInstruction": "マーカーをタップしてフルスクリーンで場所を開く"
+  },
+  "cinematicPOI": {
+    "voiceRegions": {
+      "south": "南部",
+      "north": "北部",
+      "central": "中部"
+    },
+    "categories": {
+      "food": "屋台料理",
+      "historical": "生活遺産",
+      "scenic": "夜景",
+      "local": "地元文化"
+    },
+    "categoryTitles": {
+      "food": "屋台料理",
+      "historical": "生活遺産",
+      "local": "地元文化"
+    },
+    "aria": {
+      "cinematicExperience": "シネマティック体験",
+      "openingScene": "場所のオープニング",
+      "chapterOne": "ストーリー第一章",
+      "chapterTwo": "ストーリー第二章",
+      "arrivalInfo": "到着前の情報",
+      "partnersSection": "パートナーと次のポイント",
+      "narrationControls": "ナレーションコントロール",
+      "seekPosition": "再生位置",
+      "playbackSpeed": "再生速度",
+      "voiceSelection": "音声選択"
+    },
+    "toolbar": {
+      "backToMap": "地図に戻る",
+      "exploring": "探索中",
+      "saved": "保存済み",
+      "saveLocation": "場所を保存"
+    },
+    "opening": {
+      "defaultIntro": "この場所の背後にあるストーリーを発見。",
+      "scrollCue": "スクロールしてストーリーを深く ↓"
+    },
+    "metadata": {
+      "distance": "距離",
+      "category": "カテゴリー",
+      "duration": "所要時間",
+      "rating": "評価"
+    },
+    "story": {
+      "caption": "地元のストーリー",
+      "story01": "ストーリー 01",
+      "chapter01": "01 · 起源",
+      "storyPeople": "ストーリー / 人々",
+      "chapter02": "02 · リズム"
+    },
+    "arrival": {
+      "beforeYouArrive": "到着前に",
+      "instructions": "ゆっくり歩く。\nよく聞く。\n後で味わう。",
+      "address": "住所",
+      "updating": "更新中",
+      "access": "アクセス",
+      "accessMethods": "徒歩 · バイク",
+      "narrationNote": "現地ナレーション",
+      "localStory": "地元のストーリー",
+      "chapterFormat": "第 01 / 01 章",
+      "voiceFormat": "音声"
+    },
+    "audio": {
+      "loading": "ナレーションを読み込み中...",
+      "loadingData": "データ読み込み中...",
+      "pauseNarration": "ナレーションを一時停止",
+      "startNarration": "ナレーション開始",
+      "playNarration": "ナレーション再生",
+      "expand": "プレーヤーを展開",
+      "collapse": "プレーヤーを折りたたむ",
+      "nowPlaying": "再生中",
+      "ttsHQ": "TTS · HQ"
+    },
+    "partners": {
+      "heading": "近くで食べて会う",
+      "continueStory": "フレームを超えて\nストーリーを続ける",
+      "ledger": "パートナー台帳",
+      "withinWalkingDistance": "徒歩圏内",
+      "nearestOpen": "最寄り · 営業中",
+      "qrMenu": "QRメニュー",
+      "noPartners": "このストップにはまだパートナーがリンクされていません。"
+    }
   }
 }
