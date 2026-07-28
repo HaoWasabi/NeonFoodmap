@@ -147,11 +147,6 @@ export default function CinematicPOIView({
     const partnersToRender = useMemo(() => (Array.isArray(partners) ? partners : []).slice(0, 3), [partners]);
 
     useEffect(() => {
-        const savedValue = localStorage.getItem(`nf-saved-poi-${poi.id}`) === 'true';
-        setSaved(savedValue);
-    }, [poi.id]);
-
-    useEffect(() => {
         const node = scrollRef.current;
         if (!node) return;
         const handleScroll = () => {
