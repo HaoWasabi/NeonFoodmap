@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { Media, Partner, POI } from '../types';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
 import { useTranslation } from 'react-i18next';
@@ -85,6 +86,7 @@ export default function CinematicPOIView({
 }: CinematicPOIViewProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const { i18n } = useTranslation();
+    const navigate = useNavigate();
     const [progress, setProgress] = useState(0);
     const [expanded, setExpanded] = useState(false);
     const [saved, setSaved] = useState(() => localStorage.getItem(`nf-saved-poi-${poi.id}`) === 'true');
@@ -287,7 +289,7 @@ export default function CinematicPOIView({
                 <section className="fmap002-cinematic-epilogue" aria-label="Đối tác và điểm tiếp theo">
                     <div className="fmap002-epilogue-head"><div><span>ĂN VÀ GẶP GỠ QUANH ĐÂY</span><h2>TIẾP TỤC CÂU CHUYỆN<br />NGOÀI KHUNG HÌNH</h2></div><span>PARTNER LEDGER · {String(partnersToRender.length).padStart(2, '0')}</span></div>
                     <div className="fmap002-partners">
-                        {partnersToRender.length > 0 ? partnersToRender.map((partner, index) => <div className="fmap002-partner-row" key={partner.id}><span>{String(index + 1).padStart(2, '0')}</span><div><strong>{partner.business_name}</strong><span>{partner.address || 'Trong bán kính đi bộ'}</span></div><small>{index === 0 ? 'Gần nhất · đang mở' : 'Trong bán kính đi bộ'}</small><button type="button" onClick={() => setQrPartner(partner)}>QR MENU</button></div>) : <div className="fmap002-empty-partners">Chưa có đối tác liên kết cho điểm dừng này.</div>}
+                        {partnersToRender.length > 0 ? partnersToRender.map((partner, index) => <div className="fmap002-partner-row" key={partner.id}><span>{String(index + 1).padStart(2, '0')}</span><div><strong>{partner.business_name}</strong><span>{partner.address || 'Trong bán kính đi bộ'}</span></div><small>{index === 0 ? 'Gần nhất · đang mở' : 'Trong bán kính đi bộ'}</small><button type="button" onClick={() => setQrPartner(partner)}>QR MENU</button><button type="button" className="fmap002-partner-listen-link" onClick={() => { onClose(0); navigate(`/partner/${partner.id}`); }}>NGHE</button></div>) : <div className="fmap002-empty-partners">Chưa có đối tác liên kết cho điểm dừng này.</div>}
                     </div>
                 </section>
             </article>

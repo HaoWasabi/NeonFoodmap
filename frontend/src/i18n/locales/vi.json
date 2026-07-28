@@ -209,6 +209,10 @@
   },
   "partner": {
     "viewMenu": "Xem menu",
+    "viewProfile": "Xem & Nghe",
+    "narration": "Thuyết minh",
+    "mustTry": "Món nên thử",
+    "priceRange": "Khoảng giá",
     "program": "Goc doi tac",
     "portalTitle": "Trung tam doi tac nha hang",
     "entryDescription": "Quan ly noi dung gioi thieu, menu, gio mo cua va hieu qua hien thi",
@@ -217,31 +221,31 @@
       "pending": "Cho duyet",
       "approved": "Da duyet"
     },
-    "contentSection": "Noi dung gioi thieu",
-    "ttsFallback": "Audio uu tien, TTS du phong",
-    "introText": "Noi dung gioi thieu ngan",
-    "uploadAudio": "Tai audio thu san",
-    "audioUploaded": "Da tai audio",
-    "previewButton": "Nghe thu",
-    "businessSection": "Thong tin kinh doanh",
-    "openingHours": "Khung gio mo cua",
-    "mustTry": "Mon noi bat",
-    "menuHighlight": "Combo/Menu noi bat",
-    "publishFlowTitle": "Quy trinh duyet va phan phoi",
+    "contentSection": "Nội dung giới thiệu",
+    "ttsFallback": "Audio ưu tiên, TTS dự phòng",
+    "introText": "Nội dung giới thiệu ngắn",
+    "uploadAudio": "Tải audio thu sẵn",
+    "audioUploaded": "Đã tải audio",
+    "previewButton": "Nghe thử",
+    "businessSection": "Thông tin kinh doanh",
+    "openingHours": "Khung giờ mở cửa",
+    "mustTry": "Món nổi bật",
+    "menuHighlight": "Combo/Menu nổi bật",
+    "publishFlowTitle": "Quy trình duyệt và phân phối",
     "publishFlow": {
-      "step1": "Gui noi dung moi hoac chinh sua de CMS xep hang cho duyet.",
-      "step2": "Admin kiem duyet chat luong thong tin, do dai va file audio.",
-      "step3": "Sau khi duyet, noi dung duoc publish va dong bo toi ung dung nguoi dung."
+      "step1": "Gửi nội dung mới hoặc chỉnh sửa để CMS xếp hàng chờ duyệt.",
+      "step2": "Admin kiểm duyệt chất lượng thông tin, độ dài và file audio.",
+      "step3": "Sau khi duyệt, nội dung được publish và đồng bộ tới ứng dụng người dùng."
     },
-    "performanceTitle": "Hieu qua hien thi",
+    "performanceTitle": "Hiệu quả hiển thị",
     "stats": {
-      "impression": "Luot hien thi the doi tac",
-      "interaction": "Luot tuong tac",
-      "menuView": "Luot xem menu",
-      "conversion": "Ti le chuyen doi"
+      "impression": "Lượt hiện thị thẻ đối tác",
+      "interaction": "Lượt tương tác",
+      "menuView": "Lượt xem menu",
+      "conversion": "Tỉ lệ chuyển đổi"
     },
-    "saveDraft": "Luu ban nhap doi tac",
-    "savedAt": "Da luu luc {{time}}"
+    "saveDraft": "Lưu bản nhập đối tác",
+    "savedAt": "Đã lưu lúc {{time}}"
   },
   "partnerPortal": {
     "adminPortal": "Cổng quản trị đối tác",

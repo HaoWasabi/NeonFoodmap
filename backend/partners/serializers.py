@@ -13,6 +13,105 @@ from .models import Partner
 User = get_user_model()
 
 
+class PartnerIntroMediaSerializer(serializers.ModelSerializer):
+    """Serializer cho audio giới thiệu Partner (public)."""
+
+    class Meta:
+        from pois.models import PartnerIntroMedia
+        model = PartnerIntroMedia
+        fields = ['id', 'language', 'voice_region', 'status']
+
+
+class PartnerPublicSerializer(serializers.ModelSerializer):
+    """
+    Serializer công khai cho khách du lịch xem profile partner + nghe thuyết minh.
+    Trả về intro_text đã dịch và danh sách audio files.
+    """
+    translated_intro_text = serializers.SerializerMethodField()
+    intro_audio = serializers.SerializerMethodField()
+    poi_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Partner
+        fields = [
+            'id', 'business_name', 'address', 'intro_text',
+            'translated_intro_text', 'qr_url', 'menu_details',
+            'opening_hours', 'poi', 'intro_audio', 'poi_name',
+        ]
+
+    def get_translated_intro_text(self, obj):
+        request = self.context.get('request')
+        if not request:
+            return obj.intro_text
+
+        lang = request.query_params.get('language')
+        if not lang:
+            accept_lang = request.headers.get('Accept-Language', 'vi')
+            lang = accept_lang.split(',')[0].split('-')[0].lower()
+
+        # Kiểm tra nếu có bản dịch sẵn (PartnerIntroMedia) cho ngôn ngữ yêu cầu
+        intro = obj.intro_media.filter(language=lang, status=1).first()
+        if intro and hasattr(intro, 'translated_text') and intro.translated_text:
+            return intro.translated_text
+
+        # Nếu ngôn ngữ yêu cầu == 'vi' → trả intro_text gốc
+        if lang == 'vi':
+            return obj.intro_text
+
+        # Nếu intro_text rỗng thì không cần dịch
+        if not obj.intro_text or not obj.intro_text.strip():
+            return obj.intro_text
+
+        # Dịch tự động sang ngôn ngữ yêu cầu (có try-catch để không crash API)
+        try:
+            from core.utils import translate_text
+            return translate_text(obj.intro_text, lang)
+        except Exception:
+            return obj.intro_text
+
+    def get_intro_audio(self, obj):
+        """Trả về danh sách audio files cho narration (có file_url từ core.Media)."""
+        request = self.context.get('request')
+        lang = 'vi'
+        if request:
+            lang = request.query_params.get('language') or ''
+            if not lang:
+                accept_lang = request.headers.get('Accept-Language', 'vi')
+                lang = accept_lang.split(',')[0].split('-')[0].lower()
+
+        from core.models import Media as CoreMedia
+        intro_medias = obj.intro_media.filter(status=1)
+        if lang and lang != 'vi':
+            # Ưu tiên ngôn ngữ được yêu cầu, fallback sang vi
+            lang_medias = intro_medias.filter(language=lang)
+            if not lang_medias.exists():
+                lang_medias = intro_medias.filter(language='vi')
+            intro_medias = lang_medias
+
+        results = []
+        for im in intro_medias[:5]:
+            file_url = ''
+            tts_content = ''
+            try:
+                core_media = CoreMedia.objects.get(pk=im.media_id)
+                file_url = core_media.file_url or ''
+            except CoreMedia.DoesNotExist:
+                pass
+            results.append({
+                'id': im.id,
+                'language': im.language,
+                'voice_region': im.voice_region,
+                'file_url': file_url,
+                'tts_content': tts_content,
+            })
+        return results
+
+    def get_poi_name(self, obj):
+        if obj.poi_id and obj.poi:
+            return obj.poi.name
+        return None
+
+
 class PartnerSerializer(serializers.ModelSerializer):
     translated_intro_text = serializers.SerializerMethodField()
 
@@ -35,17 +134,13 @@ class PartnerSerializer(serializers.ModelSerializer):
 
         if lang == 'vi':
             return obj.intro_text
-        
-        from core.utils import translate_text
-        # PartnerIntroMedia is related via 'intro_media'
-        # We can't easily prefetch here without changing the calling view,
-        # but for a single POI detail it's fine.
-        intro = obj.intro_media.filter(language=lang, status=1).first()
-        if intro and hasattr(intro, 'translated_text') and intro.translated_text:
-            return intro.translated_text
-            
-        # Fallback: dịch tự động
-        return translate_text(obj.intro_text, lang)
+
+        if not obj.intro_text or not obj.intro_text.strip():
+            return obj.intro_text
+
+        # Trong list view, trả text gốc (không query DB thêm, không dịch tự động)
+        # Trang detail (/partner/:id/public/) sẽ dịch đầy đủ khi cần
+        return obj.intro_text
 
 
 class PartnerCRUDSerializer(serializers.ModelSerializer):

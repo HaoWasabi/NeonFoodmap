@@ -33,6 +33,8 @@ export default function MapExplore() {
     const [isRecenterRequested, setIsRecenterRequested] = useState(false);
     const cinematicWrapperRef = useRef<HTMLDivElement>(null);
     const poisRequestIdRef = useRef(0);
+    // Partners ổn định: lưu riêng để không bị mất khi ngôn ngữ thay đổi re-trigger narration
+    const stablePartnersRef = useRef<Partner[]>([]);
 
     const location = useLocation();
     const navigate = useNavigate();
@@ -87,9 +89,14 @@ export default function MapExplore() {
     }, [position?.lat, position?.lng, user?.id, i18n.language]);
 
     const handleNarrationReady = useCallback((poi: POI, media: Media | null, partners: Partner[]) => {
+        const safePartners = Array.isArray(partners) ? partners : [];
         setActivePoi(poi);
-        setNarrationData({ poi, media, partners: Array.isArray(partners) ? partners : [] });
-        openNarration(poi, media, partners);
+        setNarrationData({ poi, media, partners: safePartners });
+        // Cập nhật ref ổn định chỉ khi có partners thực sự (tránh ghi đè bằng [] khi re-fetch lỗi)
+        if (safePartners.length > 0) {
+            stablePartnersRef.current = safePartners;
+        }
+        openNarration(poi, media, safePartners.length > 0 ? safePartners : stablePartnersRef.current);
     }, [openNarration]);
 
     const handleNarrationConflict = useCallback((newPoi: POI) => {
@@ -112,11 +119,12 @@ export default function MapExplore() {
         if (narrationData.media.language === language) return;
 
         // A language change must not keep playing the old locale's media.
-        // Invalidate the old request, clear the current media, then fetch the
-        // same POI again with the new language.
+        // Preserve partners while re-fetching media for the new language.
         const poi = activePoi;
+        const existingPartners = narrationData.partners;
         cancelNarration();
-        setNarrationData(null);
+        // Keep partners visible while media re-loads
+        setNarrationData({ poi, media: null, partners: existingPartners });
         triggerNarrationRef.current?.(poi, 'QR');
     }, [activePoi, cancelNarration, i18n.language, narrationData, user?.preferred_language]);
 
@@ -175,6 +183,7 @@ export default function MapExplore() {
     const handleNarrationClose = useCallback(async (duration: number) => {
         await finishNarration(duration);
         setNarrationData(null);
+        stablePartnersRef.current = [];
         if (activePoi) {
             setClosingPoi(activePoi);
         }
@@ -208,6 +217,10 @@ export default function MapExplore() {
     const isMediaLoading = Boolean(activePoi && narrationData?.poi.id !== activePoi.id);
     const mediaProp = isMediaLoading ? undefined : (activeNarration?.media || null);
     const isClosing = Boolean(!activePoi && closingPoi);
+    // Partners: dùng từ activeNarration nếu có, fallback từ ref ổn định (tránh mất khi chuyển ngôn ngữ)
+    const partnersForView = (activeNarration?.partners?.length ?? 0) > 0
+        ? activeNarration!.partners
+        : stablePartnersRef.current;
     const mapPois = pois;
     const activeIndex = activePoi ? mapPois.findIndex((poi) => poi.id === activePoi.id) : -1;
     const previousPoi = activeIndex > 0 ? mapPois[activeIndex - 1] : mapPois.length > 1 ? mapPois[mapPois.length - 1] : undefined;
@@ -238,7 +251,7 @@ export default function MapExplore() {
                         poi={(activePoi || closingPoi)!}
                         media={mediaProp}
                         isClosing={isClosing}
-                        partners={activeNarration?.partners || []}
+                        partners={partnersForView}
                         previousPoi={previousPoi}
                         nextPoi={nextPoi}
                         onClose={handleNarrationClose}

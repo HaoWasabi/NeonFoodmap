@@ -15,6 +15,7 @@ from .serializers import (
     PartnerCRUDSerializer,
     PartnerChangePasswordSerializer,
     PartnerProfileSerializer,
+    PartnerPublicSerializer,
     PartnerRegisterSerializer,
     PartnerTokenObtainPairSerializer,
 )
@@ -521,3 +522,101 @@ class PartnerAnalyticsView(APIView):
             'distribution_points': distribution_points,
         })
 
+
+
+class PartnerPublicDetailView(generics.RetrieveAPIView):
+    """
+    GET /api/partners/<id>/public/
+
+    Endpoint công khai cho khách du lịch xem profile partner và nghe thuyết minh.
+    Trả về thông tin cơ bản + audio narration data.
+    Cho phép xem partner active hoặc đang chờ duyệt (đã có profile).
+    """
+
+    serializer_class = PartnerPublicSerializer
+    permission_classes = [AllowAny]
+    queryset = Partner.objects.filter(
+        status__in=[Partner.Status.ACTIVE, Partner.Status.PENDING_APPROVAL]
+    ).select_related('poi').prefetch_related('intro_media')
+
+
+class PartnerTTSView(APIView):
+    """
+    GET /api/partners/<id>/tts/?language=vi
+
+    Sinh audio TTS on-demand cho partner intro_text bằng gTTS.
+    Trả về URL audio (Cloudinary) để frontend phát trực tiếp.
+    Giống cách POI narration dùng file audio.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk: int):
+        partner = get_object_or_404(
+            Partner.objects.filter(
+                status__in=[Partner.Status.ACTIVE, Partner.Status.PENDING_APPROVAL]
+            ),
+            pk=pk,
+        )
+
+        lang = request.query_params.get('language', '')
+        if not lang:
+            accept_lang = request.headers.get('Accept-Language', 'vi')
+            lang = accept_lang.split(',')[0].split('-')[0].lower()
+
+        # Cache key: partner_tts_{id}_{lang}
+        from django.core.cache import cache
+        cache_key = f'partner_tts_{pk}_{lang}'
+        cached_url = cache.get(cache_key)
+        if cached_url:
+            return Response({'audio_url': cached_url, 'cached': True})
+
+        # Kiểm tra xem đã có audio file trong PartnerIntroMedia (DB)
+        from pois.models import PartnerIntroMedia
+        from core.models import Media as CoreMedia
+        existing = partner.intro_media.filter(language=lang, status=1).first()
+        if existing:
+            try:
+                core_media = CoreMedia.objects.get(pk=existing.media_id)
+                if core_media.file_url:
+                    # Cache URL 24 giờ
+                    cache.set(cache_key, core_media.file_url, 86400)
+                    return Response({'audio_url': core_media.file_url, 'cached': True})
+            except CoreMedia.DoesNotExist:
+                pass
+
+        # Xác định text để sinh TTS
+        text = partner.intro_text or ''
+        if not text.strip():
+            return Response(
+                {'error': 'Partner chưa có nội dung giới thiệu.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Dịch text sang ngôn ngữ yêu cầu nếu cần
+        if lang and lang != 'vi':
+            try:
+                from core.utils import translate_text
+                translated = translate_text(text, lang)
+                if translated:
+                    text = translated
+            except Exception:
+                pass  # Giữ text gốc
+
+        # Sinh TTS audio bằng gTTS → upload Cloudinary → trả URL
+        # URL Cloudinary ổn định theo public_id (bcsd/tts-audio/{slug}_{lang})
+        # → lần sau cùng partner + ngôn ngữ sẽ overwrite cùng file → URL giữ nguyên
+        # → Browser + CDN cache audio file → load nhanh từ lần 2 trở đi
+        from pois.signals import _generate_tts_and_upload
+        audio_url = _generate_tts_and_upload(text, lang or 'vi', partner.business_name)
+
+        if not audio_url:
+            return Response(
+                {'error': 'Không thể tạo audio TTS.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        # Cache URL 24 giờ để lần sau trả ngay (< 1ms)
+        cache.set(cache_key, audio_url, 86400)
+
+        return Response({'audio_url': audio_url, 'cached': False})

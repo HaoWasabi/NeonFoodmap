@@ -209,6 +209,10 @@
   },
   "partner": {
     "viewMenu": "View menu",
+    "viewProfile": "View & Listen",
+    "narration": "Narration",
+    "mustTry": "Must try",
+    "priceRange": "Price range",
     "program": "Partner program",
     "portalTitle": "Restaurant partner hub",
     "entryDescription": "Manage intro content, menu, opening hours, and campaign performance",

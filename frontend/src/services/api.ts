@@ -158,8 +158,9 @@ apiClient.interceptors.request.use((config) => {
 
     // Auth Header Logic
     const url = config.url || '';
+    // Partner routes: chỉ match URLs bắt đầu bằng /partners/ (không match /pois/{id}/partners/)
     const isPartnerRoute = 
-        url.includes('/partners/') || 
+        (url.startsWith('/partners/') || url.includes('//partners/')) || 
         url.includes('/pois/my-poi') || 
         url.includes('/payments/partner-premium') ||
         (url.includes('/media') && config.method?.toLowerCase() !== 'get');
@@ -206,7 +207,7 @@ apiClient.interceptors.response.use(
 
         const url = originalRequest.url || '';
         const isPartnerRoute = 
-            url.includes('/partners/') || 
+            (url.startsWith('/partners/') || url.includes('//partners/')) || 
             url.includes('/pois/my-poi') || 
             url.includes('/payments/partner-premium') ||
             (url.includes('/media') && originalRequest.method?.toLowerCase() !== 'get');
@@ -660,6 +661,37 @@ export const getPOIPartners = async (poiId: string): Promise<Partner[]> => {
         return [];
     } catch {
         return [];
+    }
+};
+
+// --- Partner Public Profile (cho khách du lịch xem + nghe thuyết minh) ---
+export interface PartnerIntroAudio {
+    id: number;
+    language: string;
+    voice_region: string;
+    file_url: string;
+    tts_content: string;
+}
+
+export interface PartnerPublicProfile extends Partner {
+    translated_intro_text?: string;
+    intro_audio?: PartnerIntroAudio[];
+    poi_name?: string | null;
+}
+
+export const getPartnerPublicProfile = async (partnerId: string): Promise<PartnerPublicProfile> => {
+    const { data } = await apiClient.get<PartnerPublicProfile>(`/partners/${partnerId}/public/`);
+    return data;
+};
+
+export const getPartnerTTSAudio = async (partnerId: string, language?: string): Promise<string | null> => {
+    try {
+        const params: Record<string, string> = {};
+        if (language) params.language = language;
+        const { data } = await apiClient.get<{ audio_url: string }>(`/partners/${partnerId}/tts/`, { params });
+        return data.audio_url || null;
+    } catch {
+        return null;
     }
 };
 
