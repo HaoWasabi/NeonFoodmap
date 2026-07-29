@@ -207,8 +207,8 @@
 .fmap002-partner-row small { border-left: 1px solid var(--fmap002-border); padding: 0 18px; }
 .fmap002-partner-row button { align-self: stretch; border: 0; border-left: 1px solid var(--fmap002-border); background: transparent; color: var(--fmap002-ink); cursor: pointer; font-size: .6rem; font-weight: 800; text-transform: uppercase; }
 .fmap002-partner-row button:hover { background: var(--fmap002-ink); color: #fff; }
-.fmap002-partner-listen-link { align-self: stretch; display: grid; place-items: center; border: 0; border-left: 1px solid var(--fmap002-border); background: var(--fmap002-primary); color: #fff; cursor: pointer; font-size: .6rem; font-weight: 800; text-transform: uppercase; text-decoration: none; padding: 0 14px; letter-spacing: .04em; }
-.fmap002-partner-listen-link:hover { background: var(--fmap002-ink); }
+.fmap002-partner-detail-link { align-self: stretch; display: grid; place-items: center; border: 0; border-left: 1px solid var(--fmap002-border); background: var(--fmap002-primary); color: #fff; cursor: pointer; font-size: .6rem; font-weight: 800; text-transform: uppercase; text-decoration: none; padding: 0 14px; letter-spacing: .04em; }
+.fmap002-partner-detail-link:hover { background: var(--fmap002-ink); }
 .fmap002-empty-partners { border-bottom: 1px solid var(--fmap002-border); padding: 28px clamp(24px, 5vw, 72px); color: var(--fmap002-muted); font-size: .8rem; }
 .fmap002-next-band { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--fmap002-ink); }
 .fmap002-next-band button { min-height: 110px; border: 0; border-right: 1px solid var(--fmap002-ink); padding: 20px clamp(24px, 4vw, 60px); background: var(--fmap002-bg); color: var(--fmap002-ink); cursor: pointer; text-align: left; }
@@ -305,7 +305,7 @@
   .fmap002-partner-row { grid-template-columns: 44px minmax(0, 1fr) 60px 60px; }
   .fmap002-partner-row small { display: none; }
   .fmap002-partner-row > div { padding: 10px 12px; }
-  .fmap002-partner-listen-link { padding: 0 10px; font-size: .55rem; }
+  .fmap002-partner-detail-link { padding: 0 10px; font-size: .55rem; }
   .fmap002-next-band button { min-height: 92px; padding: 16px 20px; }
   .fmap002-next-band strong { font-size: 1.05rem; }
   .fmap002-corner-audio { right: 10px; bottom: 10px; left: 10px; width: auto; max-width: none; }

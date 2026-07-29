@@ -215,6 +215,10 @@
     "businessSection": "商家信息",
     "openingHours": "营业时间",
     "mustTry": "推荐菜品",
+    "qrCode": "二维码",
+    "qrScanHint": "扫描二维码查看餐厅信息",
+    "downloadQr": "下载二维码",
+    "openLink": "打开链接",
     "menuHighlight": "主推菜单",
     "publishFlowTitle": "审核与发布流程",
     "publishFlow": {

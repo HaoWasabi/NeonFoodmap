@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
 import { getPartnerPublicProfile, getPartnerTTSAudio, type PartnerPublicProfile as PartnerProfile, type PartnerIntroAudio } from '../services/api';
-import PartnerQRModal from '../components/PartnerQRModal';
+import { QRCodeSVG } from 'qrcode.react';
 
 const PLAYBACK_RATES = [0.8, 1, 1.5, 2];
 
@@ -20,7 +20,6 @@ export default function PartnerPublicProfile() {
     const [partner, setPartner] = useState<PartnerProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [showQR, setShowQR] = useState(false);
 
     const {
         isPlaying,
@@ -349,25 +348,71 @@ export default function PartnerPublicProfile() {
                     </section>
                 )}
 
-                {/* QR / Menu Button */}
-                <section className="flex gap-3">
-                    <button
-                        onClick={() => setShowQR(true)}
-                        className="flex-1 flex items-center justify-center gap-2 py-3 bg-primary text-white text-sm font-bold rounded-xl hover:bg-primary/90 transition-colors"
-                    >
-                        <span className="material-symbols-outlined text-lg">qr_code</span>
-                        {t('partner.viewMenu', 'Xem menu')}
-                    </button>
+                {/* QR Code hiện sẵn */}
+                <section className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                    <div className="flex items-center gap-2 mb-3">
+                        <span className="material-symbols-outlined text-primary text-lg">qr_code</span>
+                        <h3 className="text-sm font-bold text-slate-800">
+                            {t('partner.qrCode', 'Mã QR')}
+                        </h3>
+                    </div>
+                    <div className="flex flex-col items-center py-3">
+                        <div id="partner-qr-container" className="p-4 bg-white rounded-2xl shadow-[0_0_0_1px_rgba(0,0,0,.06),0_4px_24px_rgba(0,0,0,.1)]">
+                            <QRCodeSVG
+                                value={partner.qr_url?.trim() || `${window.location.origin}/partner/${partner.id}`}
+                                size={180}
+                                bgColor="#ffffff"
+                                fgColor="#0f172a"
+                                level="M"
+                                includeMargin={false}
+                            />
+                        </div>
+                        <p className="mt-3 text-[11px] text-slate-400 text-center max-w-[200px] leading-relaxed">
+                            {t('partner.qrScanHint', 'Quét mã QR để xem thông tin quán')}
+                        </p>
+                        <button
+                            onClick={() => {
+                                const svg = document.querySelector('#partner-qr-container svg') as SVGElement | null;
+                                if (!svg) return;
+                                const svgData = new XMLSerializer().serializeToString(svg);
+                                const canvas = document.createElement('canvas');
+                                canvas.width = 360;
+                                canvas.height = 360;
+                                const ctx = canvas.getContext('2d');
+                                if (!ctx) return;
+                                const img = new Image();
+                                img.onload = () => {
+                                    ctx.fillStyle = '#ffffff';
+                                    ctx.fillRect(0, 0, 360, 360);
+                                    ctx.drawImage(img, 90, 90, 180, 180);
+                                    const link = document.createElement('a');
+                                    link.download = `QR-${partner.business_name.replace(/\s+/g, '_')}.png`;
+                                    link.href = canvas.toDataURL('image/png');
+                                    link.click();
+                                };
+                                img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+                            }}
+                            className="mt-3 flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+                        >
+                            <span className="material-symbols-outlined text-sm">download</span>
+                            {t('partner.downloadQr', 'Tải QR')}
+                        </button>
+                    </div>
+
+                    {/* Nút Mở link nếu partner có link bên ngoài (không phải deep-link app) */}
+                    {partner.qr_url && partner.qr_url.trim() && !partner.qr_url.includes('/partner/') && (
+                        <a
+                            href={partner.qr_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 w-full py-3 px-4 mt-3 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/30 active:scale-[.97] transition-transform"
+                        >
+                            <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>open_in_new</span>
+                            {t('partner.openLink', 'Mở link')}
+                        </a>
+                    )}
                 </section>
             </main>
-
-            {/* QR Modal */}
-            {showQR && partner && (
-                <PartnerQRModal
-                    partner={partner}
-                    onClose={() => setShowQR(false)}
-                />
-            )}
         </div>
     );
 }

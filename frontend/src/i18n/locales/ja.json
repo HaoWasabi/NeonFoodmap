@@ -218,6 +218,10 @@
     "businessSection": "店舗情報",
     "openingHours": "営業時間",
     "mustTry": "おすすめ料理",
+    "qrCode": "QRコード",
+    "qrScanHint": "QRをスキャンして店舗情報を表示",
+    "downloadQr": "QRをダウンロード",
+    "openLink": "リンクを開く",
     "menuHighlight": "メニューハイライト",
     "publishFlowTitle": "審査と公開フロー",
     "publishFlow": {

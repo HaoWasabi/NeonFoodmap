@@ -28,6 +28,19 @@ export default function QRScanOverlay({ onClose, onScanSuccess }: QRScanOverlayP
         onScanSuccess(poi);
     }, [navigate, onScanSuccess]);
 
+    /** Kiểm tra xem URL có phải deep-link đến trang partner không */
+    const extractPartnerIdFromUrl = (text: string): string | null => {
+        try {
+            const url = text.startsWith('http://') || text.startsWith('https://')
+                ? new URL(text)
+                : null;
+            if (!url) return null;
+            const match = url.pathname.match(/\/partner\/(\d+)/);
+            if (match) return match[1];
+        } catch { /* not a URL */ }
+        return null;
+    };
+
     /** URL /map?poi=&qr= từ mã QR in tại quán */
     const extractMapQrFromUrl = (text: string): { poiId: string; qrToken: string } | null => {
         try {
@@ -100,6 +113,15 @@ export default function QRScanOverlay({ onClose, onScanSuccess }: QRScanOverlayP
         }
 
         try {
+            // Kiểm tra nếu QR là deep-link đến partner → navigate thẳng tới trang partner
+            const partnerId = extractPartnerIdFromUrl(decodedText.trim());
+            if (partnerId) {
+                console.log(`[QR Scan] Partner deep-link detected, ID: ${partnerId}`);
+                onClose();
+                navigate(`/partner/${partnerId}`);
+                return;
+            }
+
             let poi;
             const mapQr = extractMapQrFromUrl(decodedText.trim());
             if (mapQr) {
@@ -122,7 +144,7 @@ export default function QRScanOverlay({ onClose, onScanSuccess }: QRScanOverlayP
             processedRef.current = false;
             alert('Not found info from this QR.');
         }
-    }, [handlePOI]);
+    }, [handlePOI, navigate, onClose]);
 
     const stopCamera = useCallback(() => {
         if (scanIntervalRef.current) {
