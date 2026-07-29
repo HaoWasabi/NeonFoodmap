@@ -45,6 +45,8 @@
     "offlineMode": "Chế độ Offline"
   },
   "tour": {
+    "stopNavigation": "Điều hướng trạm",
+    "previousStop": "Trạm trước",
     "title": "Hành Trình",
     "tabOverview": "Tổng quan",
     "tabRoute": "Lộ trình",
@@ -401,6 +403,10 @@
     "loginSubtitle": "Đăng nhập để khôi phục hành trình và nội dung đã mua.",
     "signupSubtitle": "Liên kết thiết bị hiện tại với tài khoản NeonFoodmap.",
     "demoNotice": "Chế độ demo: Backend auth chưa sẵn sàng, bạn vẫn có thể vào app.",
+    "guestContinueTitle": "Không muốn tạo tài khoản?",
+    "guestContinueDescription": "Tiếp tục với tư cách du khách để khám phá bản đồ trên thiết bị này. Dữ liệu mua hàng và đồng bộ nhiều thiết bị cần tài khoản thật.",
+    "continueAsGuest": "Tiếp tục với tư cách du khách",
+    "guestLoginFailed": "Không thể tạo phiên du khách. Vui lòng kiểm tra kết nối và thử lại.",
     "username": "Tên tài khoản",
     "usernamePlaceholder": "nguoidung_vinhkhanh",
     "email": "Email",
