@@ -6,7 +6,7 @@ import AccountUpgradeModal from '../components/AccountUpgradeModal';
 import { getUserAuthSession, setPartnerAuthSession, setUserAuthSession } from '../services/api';
 import { useDeviceInfo } from '../hooks/useDeviceInfo';
 import { useApp } from '../context/AppContext';
-import type { Language, VoiceRegion } from '../types';
+import { DEFAULT_VOICE_REGION, type Language, type VoiceRegion } from '../types';
 
 const LANGUAGES: { value: Language; label: string; code: string }[] = [
   { value: 'vi', label: 'Tiếng Việt', code: 'VI' }, { value: 'en', label: 'English', code: 'EN' }, { value: 'zh', label: '中文', code: 'ZH' }, { value: 'ja', label: '日本語', code: 'JA' }, { value: 'ko', label: '한국어', code: 'KO' },
@@ -18,7 +18,7 @@ export default function Settings() {
   const { user, dispatch } = useApp();
   const deviceInfo = useDeviceInfo();
   const [language, setLanguage] = useState<Language>((localStorage.getItem('bcsd_language') as Language) || user?.preferred_language || 'vi');
-  const [voiceRegion, setVoiceRegion] = useState<VoiceRegion>(user?.preferred_voice_region || 'mien_nam');
+  const [voiceRegion, setVoiceRegion] = useState<VoiceRegion>(DEFAULT_VOICE_REGION);
   const [saved, setSaved] = useState(false);
   const [showDeviceInfo, setShowDeviceInfo] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -33,9 +33,9 @@ export default function Settings() {
   const browser = useMemo(() => { const ua = deviceInfo.userAgent || ''; if (ua.includes('Edg/')) return 'Edge'; if (ua.includes('Chrome/')) return 'Chrome'; if (ua.includes('Firefox/')) return 'Firefox'; if (ua.includes('Safari/')) return 'Safari'; return 'Unknown'; }, [deviceInfo.userAgent]);
 
   const save = () => {
-    const updatedUser = user ? { ...user, preferred_language: language, preferred_voice_region: voiceRegion } : null;
+    const updatedUser = user ? { ...user, preferred_language: language, preferred_voice_region: DEFAULT_VOICE_REGION } : null;
     if (updatedUser) { dispatch({ type: 'SET_USER', payload: updatedUser }); const session = getUserAuthSession(); if (session) setUserAuthSession({ ...session, user: updatedUser }); }
-    localStorage.setItem('bcsd_language', language); localStorage.setItem('bcsd_voice_region', voiceRegion); void i18n.changeLanguage(language); setSaved(true); window.setTimeout(() => setSaved(false), 2000);
+    localStorage.setItem('bcsd_language', language); localStorage.removeItem('bcsd_voice_region'); void i18n.changeLanguage(language); setSaved(true); window.setTimeout(() => setSaved(false), 2000);
   };
   const openPartner = () => { setPartnerAuthSession(null); navigate('/partner/login?next=%2Fpartner'); };
   const logout = () => { setUserAuthSession(null); dispatch({ type: 'CLEAR_USER' }); navigate('/login', { replace: true }); };

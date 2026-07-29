@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { Language, Media, Partner, POI } from '../types';
+import { DEFAULT_VOICE_REGION, type Language, type Media, type Partner, type POI } from '../types';
 import { useApp } from '../context/AppContext';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { useGeofence } from '../hooks/useGeofence';
@@ -57,7 +57,7 @@ export default function MapExplore() {
         const searchLat = position?.lat || DEFAULT_CENTER[0];
         const searchLng = position?.lng || DEFAULT_CENTER[1];
         const lang = (i18n.language || localStorage.getItem('bcsd_language') || user?.preferred_language || 'vi') as Language;
-        const region = user?.preferred_voice_region || 'mien_nam';
+        const region = DEFAULT_VOICE_REGION;
 
         const applyPois = (data: POI[]) => {
             if (cancelled || requestId !== poisRequestIdRef.current) return;
@@ -105,7 +105,7 @@ export default function MapExplore() {
 
     const { triggerNarration, finishNarration, cancelNarration } = useNarrationEngine({
         language: (i18n.language || localStorage.getItem('bcsd_language') || user?.preferred_language || 'vi') as Language,
-        voiceRegion: user?.preferred_voice_region || 'mien_nam',
+        voiceRegion: DEFAULT_VOICE_REGION,
         onNarrationReady: handleNarrationReady,
         onNarrationConflict: handleNarrationConflict,
     });

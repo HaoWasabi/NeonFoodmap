@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Circle, Polyline, Marker, Popup, useMap, useMa
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useTranslation } from 'react-i18next';
-import type { Language, Media, Partner, POI, Tour, TourReview } from '../types';
+import { DEFAULT_VOICE_REGION, type Language, type Media, type Partner, type POI, type Tour, type TourReview } from '../types';
 import SketchFrame, { SketchIcon } from '../components/SketchFrame';
 import ReviewForm from '../components/ReviewForm';
 import PremiumTourCheckout from '../components/PremiumTourCheckout';
@@ -118,7 +118,7 @@ export default function GuidedTour() {
   const poiTitle = (poi: POI) => poi.translated_name || poi.name;
 
   const handleNarrationReady = useCallback((poi: POI, media: Media | null, partners: Partner[]) => { setNarrationData({ poi, media, partners }); openNarration(poi, media, partners); }, [openNarration]);
-  const { triggerNarration, finishNarration } = useNarrationEngine({ language: (i18n.language || localStorage.getItem('bcsd_language') || user?.preferred_language || 'vi') as Language, voiceRegion: user?.preferred_voice_region || 'mien_nam', onNarrationReady: handleNarrationReady, onNarrationConflict: (poi) => dispatch({ type: 'PUSH_TO_QUEUE', payload: poi }) });
+  const { triggerNarration, finishNarration } = useNarrationEngine({ language: (i18n.language || localStorage.getItem('bcsd_language') || user?.preferred_language || 'vi') as Language, voiceRegion: DEFAULT_VOICE_REGION, onNarrationReady: handleNarrationReady, onNarrationConflict: (poi) => dispatch({ type: 'PUSH_TO_QUEUE', payload: poi }) });
   useEffect(() => { triggerNarrationRef.current = triggerNarration; }, [triggerNarration]);
   useEffect(() => { if (!tourStarted || narrationData || narrationQueue.length === 0) return; const timer = window.setTimeout(() => { const poi = narrationQueue[0]; dispatch({ type: 'REMOVE_FROM_QUEUE' }); triggerNarrationRef.current?.(poi, 'QR'); }, 300); return () => window.clearTimeout(timer); }, [dispatch, narrationData, narrationQueue, tourStarted]);
   useGeofence({ pois: tourStarted ? poisForGeofence : [], position: position || null, onEnter: (poi) => { triggerNarration(poi, 'AUTO'); const idx = orderedPOIs.findIndex(({ poi: item }) => item.id === poi.id); if (idx >= currentPOIIndex) setCurrentPOIIndex(idx + 1); } });

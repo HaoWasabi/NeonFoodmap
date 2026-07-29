@@ -329,6 +329,7 @@
 .settings-row strong { display: block; font-size: .8rem; }
 .settings-row small { display: block; margin-top: 4px; color: var(--sk-muted); font-size: .68rem; line-height: 1.4; }
 .settings-voice { display: grid; grid-template-columns: repeat(3,1fr); border: 1px solid var(--sk-ink); }
+.settings-row:has(.settings-voice), .fmap002-voice-switcher, .sketch-field:has(.partner-voice) { display: none; }
 .settings-voice button, .settings-language-row { min-height: 40px; border: 0; border-right: 1px solid var(--sk-ink); background: var(--sk-surface); color: inherit; cursor: pointer; font-size: .68rem; font-weight: 800; }
 .settings-voice button:last-child { border-right: 0; }
 .settings-voice button.is-active, .settings-language-row.is-active { background: var(--sk-primary); color: #fff; }

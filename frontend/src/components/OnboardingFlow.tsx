@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { initUser, getUserAuthSession } from '../services/api';
 import { useDeviceId } from '../hooks/useDeviceId';
 import { useApp } from '../context/AppContext';
-import type { Language, VoiceRegion } from '../types';
+import { DEFAULT_VOICE_REGION, type Language } from '../types';
 import { ShellIcon } from './FoodmapShell';
 
 interface OnboardingFlowProps {
@@ -87,14 +87,13 @@ export default function OnboardingFlow({ open, onComplete }: OnboardingFlowProps
             try {
                 const user = await initUser(deviceId);
                 const savedLang = localStorage.getItem('bcsd_language');
-                const savedRegion = localStorage.getItem('bcsd_voice_region');
-                dispatch({ type: 'SET_USER', payload: { ...user, preferred_language: (savedLang as Language) || user.preferred_language || 'vi', preferred_voice_region: (savedRegion as VoiceRegion) || user.preferred_voice_region || 'mien_nam' } });
+                dispatch({ type: 'SET_USER', payload: { ...user, preferred_language: (savedLang as Language) || user.preferred_language || 'vi', preferred_voice_region: DEFAULT_VOICE_REGION } });
             } catch {
                 const session = getUserAuthSession();
                 if (session?.user) {
-                    dispatch({ type: 'SET_USER', payload: { ...session.user, device_id: session.user.device_id || deviceId } });
+                    dispatch({ type: 'SET_USER', payload: { ...session.user, device_id: session.user.device_id || deviceId, preferred_voice_region: DEFAULT_VOICE_REGION } });
                 } else {
-                    dispatch({ type: 'SET_USER', payload: { id: deviceId, device_id: deviceId, preferred_language: 'vi', preferred_voice_region: 'mien_nam' } });
+                    dispatch({ type: 'SET_USER', payload: { id: deviceId, device_id: deviceId, preferred_language: 'vi', preferred_voice_region: DEFAULT_VOICE_REGION } });
                 }
             }
         };
