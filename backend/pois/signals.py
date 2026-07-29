@@ -1,7 +1,7 @@
 """
 pois/signals.py
 Tự động khởi tạo, dịch tts_content, và sinh file TTS audio (upload lên Cloudinary)
-cho các ngôn ngữ mặc định khi POI được tạo/cập nhật.
+cho các ngôn ngữ mặc định khi POI hoặc Partner được tạo/cập nhật.
 """
 import io
 import logging
@@ -225,3 +225,86 @@ def handle_manual_media_updates(sender, instance, created, **kwargs):
             # Update trực tiếp để tránh loop
             Media.objects.filter(pk=instance.pk).update(file_url=url)
             logger.info(f'[TTS] Media #{instance.pk} ({instance.language}) audio updated.')
+
+
+# ─── 3. Khi Partner được lưu — Tự động sinh TTS cho tất cả ngôn ngữ ───────────
+PARTNER_TTS_LANGS = ['vi', 'en', 'ja', 'ko', 'zh']
+
+
+@receiver(pre_save, sender='pois.Partner')
+def track_partner_changes(sender, instance, **kwargs):
+    """Lưu lại intro_text cũ để so sánh trong post_save."""
+    if instance.pk:
+        try:
+            from pois.models import Partner
+            old_obj = Partner.objects.only('intro_text', 'business_name').get(pk=instance.pk)
+            instance._old_intro_text = old_obj.intro_text
+            instance._old_business_name = old_obj.business_name
+        except Exception:
+            instance._old_intro_text = None
+            instance._old_business_name = None
+    else:
+        instance._old_intro_text = None
+        instance._old_business_name = None
+
+
+@receiver(post_save, sender='pois.Partner')
+def handle_partner_intro_tts(sender, instance, created, **kwargs):
+    """
+    Tự động sinh TTS audio cho tất cả ngôn ngữ khi Partner tạo mới hoặc cập nhật intro_text.
+    Lưu kết quả vào bảng partner_intro_media để khách truy cập không phải chờ sinh on-demand.
+    """
+    intro_text = instance.intro_text or ''
+    if not intro_text.strip():
+        return
+
+    old_intro = getattr(instance, '_old_intro_text', None)
+    old_name = getattr(instance, '_old_business_name', None)
+    is_changed = (
+        created
+        or (old_intro != instance.intro_text)
+        or (old_name != instance.business_name)
+    )
+
+    if not is_changed:
+        return
+
+    from pois.models import PartnerIntroMedia
+
+    for lang in PARTNER_TTS_LANGS:
+        # Xác định text: nếu ngôn ngữ gốc (vi) dùng trực tiếp, ngôn ngữ khác → dịch
+        if lang == 'vi':
+            tts_text = intro_text
+        else:
+            tts_text = _translate(intro_text, lang)
+            if not tts_text or not tts_text.strip():
+                tts_text = intro_text  # Fallback nếu dịch thất bại
+
+        # Sinh audio TTS
+        audio_url = _generate_tts_and_upload(tts_text, lang, instance.business_name)
+        if not audio_url:
+            logger.warning(
+                f'[PartnerTTS] Không thể sinh audio {lang} cho Partner "{instance.business_name}"'
+            )
+            continue
+
+        # Lưu hoặc cập nhật record PartnerIntroMedia
+        intro_media, _ = PartnerIntroMedia.objects.update_or_create(
+            partner=instance,
+            language=lang,
+            voice_region='',  # Mặc định không phân biệt vùng
+            defaults={
+                'file_url': audio_url,
+                'tts_content': tts_text,
+                'media_id': None,
+                'status': PartnerIntroMedia.Status.ACTIVE,
+            },
+        )
+        logger.info(
+            f'[PartnerTTS] {lang} audio ready for Partner "{instance.business_name}" → {audio_url}'
+        )
+
+    # Xoá cache cũ (nếu có) để lần truy cập tiếp theo lấy URL mới
+    from django.core.cache import cache
+    for lang in PARTNER_TTS_LANGS:
+        cache.delete(f'partner_tts_{instance.pk}_{lang}')

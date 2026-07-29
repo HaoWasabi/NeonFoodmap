@@ -22,7 +22,7 @@ from partners.serializers import PartnerSerializer
 from users.permissions import IsPartner, IsPartnerPremium
 
 # Bán kính tìm kiếm mặc định (mét)
-DEFAULT_RADIUS_M = 1000
+DEFAULT_RADIUS_M = 5000
 
 
 class POINearMeView(APIView):

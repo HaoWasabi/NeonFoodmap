@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { Media, Partner, POI } from '../types';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
 import { useTranslation } from 'react-i18next';
 import { useOfflineMedia } from '../hooks/useOfflineMedia';
+
 
 interface CinematicPOIViewProps {
     poi: POI;
@@ -83,6 +85,7 @@ export default function CinematicPOIView({
 }: CinematicPOIViewProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const { t, i18n } = useTranslation();
+    const navigate = useNavigate();
     const [progress, setProgress] = useState(0);
     const [expanded, setExpanded] = useState(false);
     const [saved, setSaved] = useState(() => localStorage.getItem(`nf-saved-poi-${poi.id}`) === 'true');
@@ -278,7 +281,7 @@ export default function CinematicPOIView({
                 <section className="fmap002-cinematic-epilogue" aria-label={t('cinematicPOI.aria.partnersSection')}>
                     <div className="fmap002-epilogue-head"><div><span>{t('cinematicPOI.partners.heading')}</span><h2>{t('cinematicPOI.partners.continueStory')}</h2></div><span>{t('cinematicPOI.partners.ledger')} · {String(partnersToRender.length).padStart(2, '0')}</span></div>
                     <div className="fmap002-partners">
-                        {partnersToRender.length > 0 ? partnersToRender.map((partner, index) => <div className="fmap002-partner-row" key={partner.id}><span>{String(index + 1).padStart(2, '0')}</span><div><strong>{partner.business_name}</strong><span>{partner.address || t('cinematicPOI.partners.withinWalkingDistance')}</span></div><small>{index === 0 ? t('cinematicPOI.partners.nearestOpen') : t('cinematicPOI.partners.withinWalkingDistance')}</small><button type="button" onClick={() => undefined}>{t('cinematicPOI.partners.qrMenu')}</button></div>) : <div className="fmap002-empty-partners">{t('cinematicPOI.partners.noPartners')}</div>}
+                        {partnersToRender.length > 0 ? partnersToRender.map((partner, index) => <div className="fmap002-partner-row" key={partner.id}><span>{String(index + 1).padStart(2, '0')}</span><div><strong>{partner.business_name}</strong><span>{partner.address || t('cinematicPOI.partners.withinWalkingDistance')}</span></div><small>{index === 0 ? t('cinematicPOI.partners.nearestOpen') : t('cinematicPOI.partners.withinWalkingDistance')}</small><button type="button" className="fmap002-partner-detail-link" onClick={() => { onClose(0); navigate(`/partner/${partner.id}`); }}>{t('cinematicPOI.partners.qrMenu')}</button></div>) : <div className="fmap002-empty-partners">{t('cinematicPOI.partners.noPartners')}</div>}
                     </div>
                 </section>
             </article>

@@ -5,6 +5,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { useTranslation } from 'react-i18next';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
 import apiClient, { getApiErrorMessage, getPartnerMapQrUrl, uploadPOICoverImage } from '../services/api';
 import type { Media, POI, POICategory } from '../types';
@@ -89,6 +90,7 @@ function MapSelector({
 }
 
 export default function PartnerPOI() {
+  const { t } = useTranslation();
   const [poi, setPoi] = useState<POI | null>(null);
   const [loading, setLoading] = useState(true);
   /** Thông báo nhẹ (vd. chưa có POI — không phải lỗi). */
@@ -145,11 +147,11 @@ export default function PartnerPOI() {
         setPoi(null);
         const status = axios.isAxiosError(err) ? err.response?.status : undefined;
         if (status === 404) {
-          setNotice('Bạn chưa có POI. Điền thông tin bên dưới và bấm lưu để tạo POI.');
+          setNotice(t('partnerPortal.noPoi'));
           setError('');
         } else {
           setNotice('');
-          setError(getApiErrorMessage(err, 'Không thể tải POI. Vui lòng thử lại.'));
+          setError(getApiErrorMessage(err, t('partnerPortal.poiLoadError')));
         }
       } finally {
         setLoading(false);
@@ -194,7 +196,7 @@ export default function PartnerPOI() {
         setMapQrExpiresAt(data.expires_at);
       } catch (err) {
         if (!cancelled) {
-          setMapQrError(getApiErrorMessage(err, 'Không tạo được mã QR. Vui lòng thử lại.'));
+          setMapQrError(getApiErrorMessage(err, t('partnerPortal.qrError')));
           setMapQrFullUrl('');
           setMapQrExpiresAt(null);
         }
@@ -219,7 +221,7 @@ export default function PartnerPOI() {
         setMapQrFullUrl(`${base}${data.map_path}`);
         setMapQrExpiresAt(data.expires_at);
       } catch (err) {
-        setMapQrError(getApiErrorMessage(err, 'Không tạo được mã QR. Vui lòng thử lại.'));
+        setMapQrError(getApiErrorMessage(err, t('partnerPortal.qrError')));
       } finally {
         setMapQrLoading(false);
       }
@@ -232,7 +234,7 @@ export default function PartnerPOI() {
     if (lat === undefined || lng === undefined || Number.isNaN(lat) || Number.isNaN(lng)) return;
 
     const controller = new AbortController();
-    const t = window.setTimeout(async () => {
+    const timer = window.setTimeout(async () => {
       setAddressLoading(true);
       setAddressError('');
       setAddressText('');
@@ -278,7 +280,7 @@ export default function PartnerPOI() {
           if (import.meta.env.DEV) {
             console.debug('[PartnerPOI] reverse geocode failed');
           }
-          setAddressError('Không lấy được địa chỉ (thử lại).');
+          setAddressError(t('partnerPortal.loadingAddress'));
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -288,13 +290,13 @@ export default function PartnerPOI() {
     }, 400);
 
     return () => {
-      clearTimeout(t);
+      clearTimeout(timer);
       controller.abort();
     };
   }, [formData.latitude, formData.longitude]);
 
   if (loading) {
-    return <section className="mx-4 mt-4 rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500 shadow-sm">Đang tải POI...</section>;
+    return <section className="mx-4 mt-4 rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500 shadow-sm">{t('partnerPortal.loadingPoi')}</section>;
   }
 
   const handleTestPoiDescription = () => {
@@ -319,10 +321,12 @@ export default function PartnerPOI() {
     }
     pause();
     setPlayingMediaId(String(m.id));
-    if (m.media_type === 'AUDIO' && m.file_url?.trim()) {
+    if (m.file_url?.trim()) {
+      // Phát file audio (Cloudinary) cho cả AUDIO lẫn TTS đã generate file
       await load(m.file_url);
       await play();
     } else {
+      // Fallback: dùng Web Speech API khi chưa có file audio
       const text = (m.tts_content || formData.description || '').trim();
       if (!text) {
         setPlayingMediaId(null);
@@ -348,9 +352,9 @@ export default function PartnerPOI() {
         setCoverImageUrl(data.cover_image_url || '');
       }
       setNotice('');
-      alert('Đã lưu POI thành công.');
+      alert(t('partnerPortal.poiSaveSuccess'));
     } catch (err) {
-      const msg = getApiErrorMessage(err, 'Không thể lưu POI. Vui lòng thử lại.');
+      const msg = getApiErrorMessage(err, t('partnerPortal.poiSaveError'));
       setError(msg);
       if (import.meta.env.DEV) {
         console.warn('[PartnerPOI] save failed', axios.isAxiosError(err) ? err.response?.status : err, err);
@@ -375,7 +379,7 @@ export default function PartnerPOI() {
         setPoi({ ...poi, cover_image_url: result.cover_image_url });
       }
     } catch (err) {
-      setCoverUploadError(getApiErrorMessage(err, 'Upload ảnh thất bại. Vui lòng thử lại.'));
+      setCoverUploadError(getApiErrorMessage(err, t('partnerPortal.uploadFailed')));
     } finally {
       setUploadCoverLoading(false);
     }
@@ -398,7 +402,7 @@ export default function PartnerPOI() {
         <button
           type="button"
           className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]"
-          aria-label="Đóng thông báo"
+          aria-label={t('partnerPortal.closeNotification')}
           onClick={() => setError('')}
         />
         <div className="relative z-10 w-full max-w-[480px] animate-fade-slide-up rounded-2xl border border-rose-200 bg-white p-4 shadow-2xl">
@@ -406,7 +410,7 @@ export default function PartnerPOI() {
             <span className="material-symbols-outlined shrink-0 text-[28px] text-rose-600">error</span>
             <div className="min-w-0 flex-1">
               <h4 id="partner-poi-error-title" className="text-sm font-bold text-slate-900">
-                Thông báo lỗi
+                {t('partnerPortal.errorTitle')}
               </h4>
               <p className="mt-2 text-sm leading-relaxed text-slate-700">{error}</p>
               <button
@@ -414,7 +418,7 @@ export default function PartnerPOI() {
                 onClick={() => setError('')}
                 className="mt-4 w-full rounded-xl bg-slate-900 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
               >
-                Đã hiểu
+                {t('partnerPortal.understood')}
               </button>
             </div>
           </div>
@@ -426,7 +430,7 @@ export default function PartnerPOI() {
   return (
     <section className="mx-4 mt-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
       {errorPopup}
-      <h3 className="text-base font-bold text-slate-900">{poi ? 'POI của Partner' : 'Tạo POI cho Partner'}</h3>
+      <h3 className="text-base font-bold text-slate-900">{poi ? t('partnerPortal.poiOfPartner') : t('partnerPortal.createPoiForPartner')}</h3>
       {notice && (
         <div
           role="status"
@@ -440,12 +444,12 @@ export default function PartnerPOI() {
         <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-3">
           <div className="mb-3 flex items-center gap-2">
             <span className="material-symbols-outlined text-[18px] text-slate-500">location_on</span>
-            <h4 className="text-sm font-bold text-slate-900">Thông tin POI</h4>
+            <h4 className="text-sm font-bold text-slate-900">{t('partnerPortal.poiInfo')}</h4>
           </div>
 
           <div className="grid gap-3">
             <div>
-          <label className="text-xs font-semibold text-slate-600">Tên POI</label>
+          <label className="text-xs font-semibold text-slate-600">{t('partnerPortal.poiName')}</label>
           <input
             value={formData.name}
             onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
@@ -454,7 +458,7 @@ export default function PartnerPOI() {
         </div>
 
           <div>
-            <label className="text-xs font-semibold text-slate-600">Mô tả</label>
+            <label className="text-xs font-semibold text-slate-600">{t('partnerPortal.poiDescription')}</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
@@ -468,28 +472,28 @@ export default function PartnerPOI() {
                 className="flex items-center justify-center gap-1 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs font-bold text-primary transition hover:bg-primary hover:text-white"
               >
                 <span className="material-symbols-outlined text-sm">{isPlaying ? 'stop_circle' : 'play_circle'}</span>
-                {isPlaying ? 'Dừng nghe' : 'Nghe thử intro'}
+                {isPlaying ? t('partnerPortal.stopListening') : t('partnerPortal.listenIntro')}
               </button>
             </div>
           </div>
           
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-semibold text-slate-600">Danh mục</label>
+                <label className="text-xs font-semibold text-slate-600">{t('partnerPortal.category')}</label>
                 <select
                   value={formData.category}
                   onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value as POICategory }))}
                   className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-primary"
                 >
-                  <option value="food">Ẩm thực</option>
-                  <option value="historical">Lịch sử</option>
-                  <option value="cultural">Văn hóa</option>
-                  <option value="scenic">Phong cảnh</option>
+                  <option value="food">{t('partnerPortal.catFood')}</option>
+                  <option value="historical">{t('partnerPortal.catHistorical')}</option>
+                  <option value="cultural">{t('partnerPortal.catCultural')}</option>
+                  <option value="scenic">{t('partnerPortal.catScenic')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-600">Geofence (m)</label>
+                <label className="text-xs font-semibold text-slate-600">{t('partnerPortal.geofence')}</label>
                 <input
                   type="number"
                   value={formData.geofence_radius}
@@ -501,7 +505,7 @@ export default function PartnerPOI() {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-600">Vị trí trên bản đồ (click để chọn)</label>
+            <label className="mb-1 block text-xs font-semibold text-slate-600">{t('partnerPortal.mapLocation')}</label>
             <div className="h-52 w-full overflow-hidden rounded-xl border border-slate-200">
               <MapContainer center={[formData.latitude, formData.longitude]} zoom={15} style={{ height: '100%', width: '100%' }}>
                 <TileLayer
@@ -515,14 +519,14 @@ export default function PartnerPOI() {
               </MapContainer>
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              Toạ độ: {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
+              {t('partnerPortal.coordinates')}: {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
             </p>
-            <label className="mt-2 block text-xs font-semibold text-slate-600">Địa chỉ</label>
+            <label className="mt-2 block text-xs font-semibold text-slate-600">{t('partnerPortal.address')}</label>
             <textarea
               value={
                 addressLoading
-                  ? 'Đang lấy địa chỉ...'
-                  : addressText || addressError || 'Click lên bản đồ để lấy địa chỉ.'
+                  ? t('partnerPortal.loadingAddress')
+                  : addressText || addressError || t('partnerPortal.clickMapAddress')
               }
               readOnly
               rows={3}
@@ -539,7 +543,7 @@ export default function PartnerPOI() {
             disabled={!formData.name || saving}
             className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition hover:bg-primary-dark disabled:opacity-50"
           >
-          {saving ? 'Đang lưu...' : poi ? 'Cập nhật POI' : 'Tạo POI'}
+          {saving ? t('partnerPortal.savingPoi') : poi ? t('partnerPortal.updatePoi') : t('partnerPortal.createPoi')}
           </button>
         </div>
 
@@ -548,10 +552,10 @@ export default function PartnerPOI() {
             <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[18px] text-slate-500">translate</span>
-                <h4 className="text-sm font-bold text-slate-900">Thuyết minh đa ngôn ngữ</h4>
+                <h4 className="text-sm font-bold text-slate-900">{t('partnerPortal.multiLangNarration')}</h4>
               </div>
               <div className="min-w-[160px] flex-1 sm:flex-initial">
-                <label className="mb-1 block text-xs font-semibold text-slate-600">Ngôn ngữ</label>
+                <label className="mb-1 block text-xs font-semibold text-slate-600">{t('partnerPortal.selectLanguage')}</label>
                 <select
                   value={poiMediaLang}
                   onChange={(e) => setPoiMediaLang(e.target.value)}
@@ -566,7 +570,7 @@ export default function PartnerPOI() {
               </div>
             </div>
             <p className="mb-3 text-xs text-slate-500">
-              Chọn ngôn ngữ để xem từng bản TTS / file âm thanh. Mỗi dòng có thể là giọng miền khác nhau.
+              {t('partnerPortal.multiLangNarrationDesc')}
             </p>
             <ul className="grid gap-2">
               {filteredPoiMedia.map((m) => {
@@ -594,11 +598,11 @@ export default function PartnerPOI() {
                           </p>
                         ) : m.media_type === 'AUDIO' ? (
                           <p className="mt-1 truncate text-xs text-slate-500" title={m.file_url}>
-                            {m.file_url ? 'File âm thanh đã tải lên' : 'Chưa có file'}
+                            {m.file_url ? t('partnerPortal.listen') : '—'}
                           </p>
                         ) : (
                           <p className="mt-1 text-xs text-slate-500 italic">
-                            Dùng mô tả POI nếu chưa có văn bản TTS riêng.
+                            {t('partnerPortal.noMediaAvailable')}
                           </p>
                         )}
                       </div>
@@ -611,7 +615,7 @@ export default function PartnerPOI() {
                         <span className="material-symbols-outlined text-[18px]">
                           {isRowPlaying ? 'stop_circle' : 'play_circle'}
                         </span>
-                        {isRowPlaying ? 'Dừng' : 'Nghe'}
+                        {isRowPlaying ? t('partnerPortal.stop') : t('partnerPortal.listen')}
                       </button>
                     </div>
                   </li>
@@ -630,18 +634,18 @@ export default function PartnerPOI() {
                   <div className="relative h-44 w-full overflow-hidden bg-slate-100">
                     <img
                       src={coverImageUrl}
-                      alt="Ảnh bìa POI"
+                      alt={t('partnerPortal.coverImage')}
                       className="h-full w-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent" />
                     <span className="absolute bottom-2 left-3 rounded-full bg-emerald-500 px-2.5 py-0.5 text-[10px] font-bold text-white shadow">
-                      ✓ Đã có ảnh bìa
+                      ✓ {t('partnerPortal.hasCover')}
                     </span>
                   </div>
                 ) : (
                   <div className="flex h-44 w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-slate-50 to-slate-100">
                     <span className="material-symbols-outlined text-5xl text-slate-300">image</span>
-                    <p className="text-xs font-medium text-slate-400">Chưa có ảnh bìa</p>
+                    <p className="text-xs font-medium text-slate-400">{t('partnerPortal.noCover')}</p>
                   </div>
                 )}
               </div>
@@ -649,9 +653,9 @@ export default function PartnerPOI() {
               <div className="p-3">
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <h4 className="text-sm font-bold text-slate-900">Ảnh bìa</h4>
+                    <h4 className="text-sm font-bold text-slate-900">{t('partnerPortal.coverImage')}</h4>
                     <p className="mt-0.5 text-[11px] text-slate-500">
-                      Hiển thị trên bản đồ và bottom sheet thược minh. Tỷ lệ 16:9 được khuyến nghị.
+                      {t('partnerPortal.coverImageDesc')}
                     </p>
                     {coverUploadError && (
                       <p className="mt-1 text-[11px] font-medium text-rose-600">{coverUploadError}</p>
@@ -666,12 +670,12 @@ export default function PartnerPOI() {
                     {uploadCoverLoading ? (
                       <>
                         <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
-                        Đang tải...
+                        {t('partnerPortal.uploading')}
                       </>
                     ) : (
                       <>
                         <span className="material-symbols-outlined text-[16px]">upload</span>
-                        {coverImageUrl ? 'Đổi ảnh' : 'Tải ảnh lên'}
+                        {coverImageUrl ? t('partnerPortal.changeCover') : t('partnerPortal.uploadCover')}
                       </>
                     )}
                   </button>
@@ -688,10 +692,9 @@ export default function PartnerPOI() {
 
             {/* Mã QR Địa Điểm (đường dẫn có chữ ký, hiệu lực 1 giờ) */}
             <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm flex flex-col items-center justify-center p-6 text-center">
-              <h4 className="text-sm font-bold text-slate-900 mb-2">Mã QR</h4>
+              <h4 className="text-sm font-bold text-slate-900 mb-2">{t('partnerPortal.qrCode')}</h4>
               <p className="text-xs text-slate-500 mb-4 max-w-xs">
-                Mỗi mã có hiệu lực <span className="font-semibold text-slate-700">1 giờ</span>. In mới hoặc bấm làm mới
-                trước khi in để du khách quét được.
+                {t('partnerPortal.qrDesc')}
               </p>
               <button
                 type="button"
@@ -699,7 +702,7 @@ export default function PartnerPOI() {
                 disabled={mapQrLoading || !poi}
                 className="mb-4 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs font-bold text-primary transition hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {mapQrLoading ? 'Đang tạo mã…' : 'Làm mới mã (gia hạn 1 giờ)'}
+                {mapQrLoading ? t('partnerPortal.generatingQr') : t('partnerPortal.refreshQr')}
               </button>
               {mapQrError ? (
                 <p className="mb-4 text-xs text-rose-600">{mapQrError}</p>
@@ -707,7 +710,7 @@ export default function PartnerPOI() {
               <div className="rounded-2xl border border-slate-200 p-4 bg-white shadow-sm">
                 {mapQrLoading && !mapQrFullUrl ? (
                   <div className="flex h-[200px] w-[200px] items-center justify-center text-xs text-slate-500">
-                    Đang tải…
+                    {t('common.loading')}
                   </div>
                 ) : mapQrFullUrl ? (
                   <QRCodeSVG

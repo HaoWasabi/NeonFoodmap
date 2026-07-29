@@ -18,6 +18,8 @@ urlpatterns = [
 
     # Partner business CRUD endpoints
     path('', views.PartnerListCreateView.as_view(), name='list-create'),
+    path('<int:pk>/public/', views.PartnerPublicDetailView.as_view(), name='public-detail'),
+    path('<int:pk>/tts/', views.PartnerTTSView.as_view(), name='tts'),
     path('<int:pk>/', views.PartnerDetailCRUDView.as_view(), name='detail-crud'),
     path('<int:pk>/approve/', views.PartnerApproveView.as_view(), name='approve'),
     path('<int:pk>/reject/', views.PartnerRejectView.as_view(), name='reject'),
