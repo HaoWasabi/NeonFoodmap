@@ -187,8 +187,8 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '30/minute',
-        'user': '100/minute',
+        'anon': '200/minute',
+        'user': '500/minute',
     },
     # Không đặt DEFAULT_PAGINATION_CLASS toàn cục để tránh làm vỡ các API list đơn giản.
     # View nào cần pagination thì tự set pagination_class.

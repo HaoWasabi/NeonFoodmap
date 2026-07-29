@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import type { Partner } from '../types';
 import PartnerQRModal from './PartnerQRModal';
 
@@ -9,6 +10,7 @@ interface PartnerCardProps {
 
 export default function PartnerCard({ partner }: PartnerCardProps) {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const [showQR, setShowQR] = useState(false);
 
     // Luôn có thể mở QR popup (dùng origin nếu chưa có qr_url)
@@ -44,10 +46,17 @@ export default function PartnerCard({ partner }: PartnerCardProps) {
                     {/* Buttons row */}
                     <div className="mt-2 flex items-center gap-1.5">
                         <button
-                            onClick={() => setShowQR(true)}
+                            onClick={() => navigate(`/partner/${partner.id}`)}
                             className="py-1 px-3 bg-primary/10 text-primary text-[10px] font-bold rounded-lg hover:bg-primary hover:text-white transition-colors"
                         >
-                            {t('partner.viewMenu')}
+                            {t('partner.viewProfile', 'Xem & Nghe')}
+                        </button>
+
+                        <button
+                            onClick={() => setShowQR(true)}
+                            className="py-1 px-3 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-lg hover:bg-primary hover:text-white transition-colors"
+                        >
+                            {t('partner.viewMenu', 'Menu')}
                         </button>
 
                         {hasQR && (

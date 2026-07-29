@@ -158,9 +158,11 @@ apiClient.interceptors.request.use((config) => {
 
     // Auth Header Logic
     const url = config.url || '';
+    // Partner routes: chỉ match URLs bắt đầu bằng /partners/ (không match /pois/{id}/partners/)
     const isPartnerRoute = 
-        url.includes('/partners/') || 
+        (url.startsWith('/partners/') || url.includes('//partners/')) || 
         url.includes('/pois/my-poi') || 
+        url.includes('/payments/partner-premium') ||
         (url.includes('/media') && config.method?.toLowerCase() !== 'get');
         
     const isAuthRoute =
@@ -179,6 +181,13 @@ apiClient.interceptors.request.use((config) => {
             const session = getUserAuthSession();
             if (session?.access) {
                 config.headers.Authorization = `Bearer ${session.access}`;
+            } else {
+                // Fallback: nếu không có User session nhưng có Partner session
+                // (ví dụ: partner gọi PayPal endpoints từ Partner Portal)
+                const partnerSession = getPartnerAuthSession();
+                if (partnerSession?.access) {
+                    config.headers.Authorization = `Bearer ${partnerSession.access}`;
+                }
             }
         }
     }
@@ -206,8 +215,9 @@ apiClient.interceptors.response.use(
 
         const url = originalRequest.url || '';
         const isPartnerRoute = 
-            url.includes('/partners/') || 
+            (url.startsWith('/partners/') || url.includes('//partners/')) || 
             url.includes('/pois/my-poi') || 
+            url.includes('/payments/partner-premium') ||
             (url.includes('/media') && originalRequest.method?.toLowerCase() !== 'get');
 
         // Avoid refresh loop for login/refresh/logout/guest endpoints
@@ -265,6 +275,41 @@ apiClient.interceptors.response.use(
             // --- USER/GUEST REFRESH ---
             const session = getUserAuthSession();
             if (!session?.refresh) {
+                // Fallback: thử Partner refresh nếu không có User session
+                const partnerSession = getPartnerAuthSession();
+                if (partnerSession?.refresh) {
+                    try {
+                        if (!partnerRefreshPromise) {
+                            partnerRefreshPromise = (async () => {
+                                const refreshResp = await axios.post<{ access?: string }>(
+                                    `${API_BASE_URL}/partners/account/login/refresh/`,
+                                    { refresh: partnerSession.refresh },
+                                    { 
+                                        headers: { 
+                                            'Content-Type': 'application/json',
+                                            'ngrok-skip-browser-warning': 'true' 
+                                        }, 
+                                        timeout: 10000 
+                                    }
+                                );
+                                const newAccess = refreshResp.data?.access;
+                                if (!newAccess) throw new Error('Refresh failed');
+                                
+                                const nextSession: PartnerAuthSession = { ...partnerSession, access: newAccess };
+                                setPartnerAuthSession(nextSession);
+                                return newAccess;
+                            })().finally(() => { partnerRefreshPromise = null; });
+                        }
+
+                        const newAccess = await partnerRefreshPromise;
+                        originalRequest._retry = true;
+                        originalRequest.headers.Authorization = `Bearer ${newAccess}`;
+                        return apiClient(originalRequest);
+                    } catch {
+                        setPartnerAuthSession(null);
+                        return Promise.reject(error);
+                    }
+                }
                 setUserAuthSession(null);
                 return Promise.reject(error);
             }
@@ -413,6 +458,9 @@ export interface PartnerAnalyticsData {
     wow_impressions: number | null;
     wow_interactions: number | null;
     has_poi: boolean;
+    hourly_breakdown: Array<{ hour: number; count: number }>;
+    top_dishes: Array<{ rank: number; name: string; views: number }>;
+    distribution_points: Array<{ id: string; label: string; scans: number; type: string }>;
 }
 
 export const getPartnerAnalytics = async (): Promise<PartnerAnalyticsData> => {
@@ -560,7 +608,7 @@ export const checkPartnerPremiumPurchase = async (): Promise<{ purchased: boolea
 };
 
 // --- POI endpoints ---
-export const getPOIsNearMe = async (lat: number, lng: number, language = 'vi', voiceRegion = 'mien_nam', radius = 500): Promise<POI[]> => {
+export const getPOIsNearMe = async (lat: number, lng: number, language = 'vi', voiceRegion = 'mien_nam', radius = 5000): Promise<POI[]> => {
     const { data } = await apiClient.get<POI[]>('/pois/near-me/', { params: { lat, lng, radius, language, voice_region: voiceRegion } });
     return data;
 };
@@ -635,6 +683,37 @@ export const getPOIPartners = async (poiId: string): Promise<Partner[]> => {
         return [];
     } catch {
         return [];
+    }
+};
+
+// --- Partner Public Profile (cho khách du lịch xem + nghe thuyết minh) ---
+export interface PartnerIntroAudio {
+    id: number;
+    language: string;
+    voice_region: string;
+    file_url: string;
+    tts_content: string;
+}
+
+export interface PartnerPublicProfile extends Partner {
+    translated_intro_text?: string;
+    intro_audio?: PartnerIntroAudio[];
+    poi_name?: string | null;
+}
+
+export const getPartnerPublicProfile = async (partnerId: string): Promise<PartnerPublicProfile> => {
+    const { data } = await apiClient.get<PartnerPublicProfile>(`/partners/${partnerId}/public/`);
+    return data;
+};
+
+export const getPartnerTTSAudio = async (partnerId: string, language?: string): Promise<string | null> => {
+    try {
+        const params: Record<string, string> = {};
+        if (language) params.language = language;
+        const { data } = await apiClient.get<{ audio_url: string }>(`/partners/${partnerId}/tts/`, { params });
+        return data.audio_url || null;
+    } catch {
+        return null;
     }
 };
 

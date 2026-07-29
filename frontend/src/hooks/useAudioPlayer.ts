@@ -39,6 +39,14 @@ if (typeof window !== 'undefined') {
     window.addEventListener('mousedown', unlock);
     window.addEventListener('touchstart', unlock);
     window.addEventListener('keydown', unlock);
+
+    // Pre-load voices (Chrome loads them async and needs this trigger)
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.getVoices();
+        window.speechSynthesis.addEventListener?.('voiceschanged', () => {
+            window.speechSynthesis.getVoices();
+        });
+    }
 }
 
 interface UseAudioPlayerOptions {
@@ -164,13 +172,28 @@ export function useAudioPlayer({ onEnded, onTimeUpdate }: UseAudioPlayerOptions 
         const voices = window.speechSynthesis.getVoices();
         const requestedLanguage = ttsLangRef.current.replace('_', '-').toLowerCase();
         const requestedPrefix = requestedLanguage.split('-')[0];
-        const preferredVoice = voices.find((voice) => {
+        
+        // Voice selection priority:
+        // 1. Exact locale match (e.g., vi-VN)
+        // 2. Prefix match (e.g., any vi-*)
+        // 3. Name-based match (e.g., "Google tiếng Việt", "Microsoft An - Vietnamese")
+        // 4. null → browser uses u.lang to select (may fallback to English!)
+        let preferredVoice = voices.find((voice) => {
             const voiceLanguage = voice.lang.replace('_', '-').toLowerCase();
             return voiceLanguage === requestedLanguage;
         }) ?? voices.find((voice) => {
             const voiceLanguage = voice.lang.replace('_', '-').toLowerCase();
             return voiceLanguage.startsWith(`${requestedPrefix}-`);
-        });
+        }) ?? null;
+
+        // Fallback: tìm voice theo tên nếu locale match thất bại
+        // Hữu ích cho tiếng Việt trên Windows khi voice.lang có thể khác format
+        if (!preferredVoice && requestedPrefix === 'vi') {
+            preferredVoice = voices.find((voice) => {
+                const name = voice.name.toLowerCase();
+                return name.includes('viet') || name.includes('tiếng việt');
+            }) ?? null;
+        }
         
         // Tính lại startTimeRef để interval tiếp tục từ currentTimeRef hiện tại
         startTimeRef.current = Date.now() - (currentTimeRef.current * 1000 / playbackRateRef.current);
@@ -191,10 +214,10 @@ export function useAudioPlayer({ onEnded, onTimeUpdate }: UseAudioPlayerOptions 
                     if (!chunkText) return;
                     const u = new SpeechSynthesisUtterance(chunkText);
                     u.lang = ttsLangRef.current;
-                    u.rate = playbackRateRef.current;
                     if (preferredVoice) {
                         u.voice = preferredVoice;
                     }
+                    u.rate = playbackRateRef.current;
                     
                     if (index === chunks.length - 1) {
                         utteranceRef.current = u; // Giữ ref của chunk cuối chống GC
@@ -305,35 +328,75 @@ export function useAudioPlayer({ onEnded, onTimeUpdate }: UseAudioPlayerOptions 
         seek(currentTimeRef.current + seconds);
     }, [seek]);
 
-    const speakTTS = useCallback((text: string, lang = 'vi-VN', retryCount = 0) => {
-        if (!('speechSynthesis' in window)) return;
-        
-        const voices = window.speechSynthesis.getVoices();
-        const targetPrefix = lang.split('-')[0].toLowerCase();
-        const hasMatchingVoice = voices.some(v => {
-            const normalized = v.lang.replace('_', '-').toLowerCase();
-            return normalized === lang.toLowerCase() || normalized.startsWith(targetPrefix);
-        });
-        
-        // Đôi khi voices chưa load kịp (mảng voices rỗng), retry nhẹ tối đa 3 lần
-        if (!hasMatchingVoice && voices.length === 0 && retryCount < 3) {
-            console.log(`Voices for ${lang} not loaded yet, retrying speakTTS in 200ms...`);
-            setIsLoading(true);
-            setTimeout(() => speakTTS(text, lang, retryCount + 1), 200);
-            return;
-        }
+    const speakTTS = useCallback((text: string, lang = 'vi-VN') => {
+        const targetLang = lang.replace('_', '-').toLowerCase();
+        const targetPrefix = targetLang.split('-')[0];
 
-        setIsLoading(false);
-        isTTSRef.current = true;
-        ttsTextRef.current = text;
-        ttsLangRef.current = lang;
-        
-        const estimatedSeconds = Math.max(1, Math.ceil(text.length / 4));
-        updateDuration(estimatedSeconds);
-        updateCurrentTime(0);
-        
-        playTTSFromCurrentTime();
-    }, [updateDuration, updateCurrentTime, playTTSFromCurrentTime]);
+        // Ưu tiên Google Translate TTS qua Audio element (giọng tự nhiên, hỗ trợ tiếng Việt)
+        // Giống cách POI narration dùng file audio → đọc đúng giọng mọi ngôn ngữ
+        const playGoogleTTS = () => {
+            isTTSRef.current = false; // Dùng Audio element, không phải Web Speech API
+            const audio = getAudio();
+            
+            // Google Translate TTS: cắt text thành chunks <= 200 ký tự (giới hạn URL)
+            const maxLen = 200;
+            const chunks: string[] = [];
+            let remaining = text;
+            while (remaining.length > 0) {
+                if (remaining.length <= maxLen) {
+                    chunks.push(remaining);
+                    break;
+                }
+                // Tìm điểm cắt tại dấu câu gần nhất
+                let cutAt = remaining.lastIndexOf('.', maxLen);
+                if (cutAt < 50) cutAt = remaining.lastIndexOf(',', maxLen);
+                if (cutAt < 50) cutAt = remaining.lastIndexOf(' ', maxLen);
+                if (cutAt < 50) cutAt = maxLen;
+                chunks.push(remaining.substring(0, cutAt + 1));
+                remaining = remaining.substring(cutAt + 1).trim();
+            }
+
+            // Tạo URL cho chunk đầu tiên (single audio play cho đơn giản)
+            const firstChunk = chunks[0] || text.substring(0, maxLen);
+            const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${targetPrefix}&q=${encodeURIComponent(firstChunk)}`;
+            
+            audio.src = ttsUrl;
+            audio.playbackRate = playbackRateRef.current;
+            audio.load();
+            updateCurrentTime(0);
+            const estimatedSeconds = Math.max(1, Math.ceil(text.length / 4));
+            updateDuration(estimatedSeconds);
+            
+            audio.play().then(() => {
+                updateIsPlaying(true);
+                setIsLoading(false);
+            }).catch((e) => {
+                console.warn('[TTS] Google Translate TTS failed, falling back to Web Speech API:', e);
+                // Fallback sang Web Speech API nếu Google TTS bị block
+                fallbackToWebSpeech();
+            });
+        };
+
+        const fallbackToWebSpeech = () => {
+            if (!('speechSynthesis' in window)) return;
+            
+            setIsLoading(false);
+            isTTSRef.current = true;
+            ttsTextRef.current = text;
+            ttsLangRef.current = lang;
+            
+            const estimatedSeconds = Math.max(1, Math.ceil(text.length / 4));
+            updateDuration(estimatedSeconds);
+            updateCurrentTime(0);
+            
+            playTTSFromCurrentTime();
+        };
+
+        setIsLoading(true);
+
+        // Thử Google Translate TTS trước (giọng tự nhiên cho mọi ngôn ngữ bao gồm tiếng Việt)
+        playGoogleTTS();
+    }, [getAudio, updateDuration, updateCurrentTime, updateIsPlaying, playTTSFromCurrentTime]);
 
     useEffect(() => {
         const audio = getAudio();

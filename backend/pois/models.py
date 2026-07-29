@@ -278,10 +278,26 @@ class PartnerIntroMedia(models.Model):
         related_name='intro_media',
         verbose_name='Đối tác',
     )
-    # Tham chiếu đến file media từ core.models (Cloudinary)
+    # Tham chiếu đến file media từ core.models (Cloudinary) — dùng cho file upload thủ công
     media_id = models.IntegerField(
         'Mã file media',
-        help_text='ID của file media từ bảng core.media (upload vào Cloudinary)',
+        null=True,
+        blank=True,
+        default=None,
+        help_text='ID của file media từ bảng core.media (upload vào Cloudinary). Null nếu dùng file_url trực tiếp.',
+    )
+    file_url = models.URLField(
+        'URL file âm thanh',
+        max_length=1024,
+        blank=True,
+        default='',
+        help_text='URL Cloudinary của file TTS tự động sinh. Ưu tiên hơn media_id.',
+    )
+    tts_content = models.TextField(
+        'Nội dung TTS (bản dịch)',
+        blank=True,
+        default='',
+        help_text='Văn bản đã dịch dùng để sinh TTS audio.',
     )
     language = models.CharField(
         'Ngôn ngữ',

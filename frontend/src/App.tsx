@@ -24,6 +24,7 @@ const UserAuth = lazy(() => import('./pages/UserAuth'));
 const PartnerPortal = lazy(() => import('./pages/PartnerPortal'));
 const PartnerLogin = lazy(() => import('./pages/PartnerLogin'));
 const PartnerSignup = lazy(() => import('./pages/PartnerSignup'));
+const PartnerPublicProfile = lazy(() => import('./pages/PartnerPublicProfile'));
 const DemoQR = lazy(() => import('./pages/DemoQR'));
 const InvoiceDetail = lazy(() => import('./pages/InvoiceDetail'));
 
@@ -86,6 +87,7 @@ function AppSurface() {
               <Route path="/invoice" element={<InvoiceDetail />} />
               <Route path="/partner/login" element={<PartnerLogin />} />
               <Route path="/partner/signup" element={<PartnerSignup />} />
+              <Route path="/partner/:id" element={<PartnerPublicProfile />} />
               <Route path="/partner" element={<RequirePartnerAuth><PartnerPortal /></RequirePartnerAuth>} />
               <Route path="/demo-qr" element={<DemoQR />} />
               <Route path="*" element={<Navigate to="/map" replace />} />
