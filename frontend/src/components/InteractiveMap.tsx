@@ -303,7 +303,7 @@ export default function InteractiveMap({
                 });
             }
         }
-    }, [featuredPoi, mapReady, mappablePois]);
+    }, [featuredPoi, mapReady, mappablePois, t]);
 
     useEffect(() => {
         const map = mapRef.current;
