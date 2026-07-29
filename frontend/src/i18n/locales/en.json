@@ -114,7 +114,35 @@
     "notFound": "Tour not found",
     "backToRoutes": "Back to list",
     "relatedPOIs": "Stops in tour",
-    "unlocked": "Unlocked"
+    "unlocked": "Unlocked",
+    "searchPlaceholder": "SEARCH TOURS OR STOPS...",
+    "selectedRoute": "Selected Route",
+    "offRouteWarning": "[WARNING] Off Route",
+    "gpsActive": "GPS is active",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "tourContent": "Tour Content",
+    "tourDetailsCollapse": "Collapse details panel",
+    "upShort": "UP",
+    "stopsUppercase": "STOPS",
+    "minutesUppercase": "MIN",
+    "done": "✓",
+    "finishedTour": "Tour completed.",
+    "metersShort": "M"
+  },
+  "checkout": {
+    "unlockTourTitle": "Unlock Tour",
+    "unlockDescription": "Unlock all stops, professional audio narration, and offline download for this tour.",
+    "unlockContent": "Unlock content",
+    "duration": "Duration",
+    "forever": "FOREVER",
+    "totalPayment": "Total payment",
+    "initializing": "Initializing...",
+    "continuePaypal": "Continue with PayPal",
+    "unlockSuccess": "Unlocked Successfully!",
+    "unlockSuccessDesc": "You can now start your premium tour.",
+    "startTourBtn": "Start Tour",
+    "securePayment": "Secure payment via PayPal gateway. Sandbox environment does not charge real money."
   },
   "offline": {
     "title": "Download Offline Data",
@@ -140,6 +168,15 @@
     "voiceNorthDesc": "Traditional Northern Vietnamese accent",
     "voiceCentral": "Central voice",
     "voiceCentralDesc": "Central Vietnamese accent",
+    "voiceSouthLabel": "South",
+    "voiceNorthLabel": "North",
+    "voiceCentralLabel": "Central",
+    "searchPlaceholder": "SEARCH SETTINGS...",
+    "topbarVoiceStatus": "VOICE · EN",
+    "routeMark": "EN",
+    "routeTitle": "Southern Voice",
+    "routeMeta": "EN · AUTO GEOFENCE ON",
+    "pageSubtitleRaw": "VOICE · LANGUAGE · ACCOUNT · PARTNER",
     "appInfo": "App Information",
     "appName": "Vĩnh Khánh Food Street",
     "deviceInfo": "Device Information",
@@ -422,5 +459,103 @@
     "total": "Total Amount",
     "paid": "Paid",
     "unpaid": "Unpaid"
+  },
+  "interactiveMap": {
+    "openLocation": "Open location",
+    "mapViewport": "Real OpenStreetMap 2.5D map",
+    "mapOfflineError": "Unable to load OpenFreeMap tiles. Check connection to see 2.5D buildings.",
+    "viewMode": "Map view angle",
+    "entity3D": "3D entities",
+    "toggle3D": "Toggle 3D",
+    "mapControls": "Map controls",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "myLocation": "Return to my location",
+    "tapMarkerInstruction": "Tap marker to open fullscreen location"
+  },
+  "cinematicPOI": {
+    "voiceRegions": {
+      "south": "Southern",
+      "north": "Northern",
+      "central": "Central"
+    },
+    "categories": {
+      "food": "Street food",
+      "historical": "Living heritage",
+      "scenic": "Night scenery",
+      "local": "Local culture"
+    },
+    "categoryTitles": {
+      "food": "STREET FOOD",
+      "historical": "LIVING HERITAGE",
+      "local": "LOCAL CULTURE"
+    },
+    "aria": {
+      "cinematicExperience": "Cinematic experience",
+      "openingScene": "Location opening",
+      "chapterOne": "Chapter one of the story",
+      "chapterTwo": "Chapter two of the story",
+      "arrivalInfo": "Information before arrival",
+      "partnersSection": "Partners and next point",
+      "narrationControls": "Narration controls",
+      "seekPosition": "Playback position",
+      "playbackSpeed": "Playback speed",
+      "voiceSelection": "Voice selection"
+    },
+    "toolbar": {
+      "backToMap": "Back to map",
+      "exploring": "EXPLORING",
+      "saved": "Saved",
+      "saveLocation": "Save location"
+    },
+    "opening": {
+      "defaultIntro": "Discover the story behind this place.",
+      "scrollCue": "SCROLL TO DIVE DEEPER INTO THE STORY ↓"
+    },
+    "metadata": {
+      "distance": "DISTANCE",
+      "category": "CATEGORY",
+      "duration": "DURATION",
+      "rating": "RATING"
+    },
+    "story": {
+      "caption": "LOCAL STORY",
+      "story01": "STORY 01",
+      "chapter01": "01 · ORIGINS",
+      "storyPeople": "STORY / PEOPLE",
+      "chapter02": "02 · RHYTHM"
+    },
+    "arrival": {
+      "beforeYouArrive": "BEFORE YOU ARRIVE",
+      "instructions": "GO SLOW.\nLISTEN WELL.\nTASTE AFTER.",
+      "address": "ADDRESS",
+      "updating": "Updating",
+      "access": "ACCESS",
+      "accessMethods": "Walk · Motorbike",
+      "narrationNote": "ON-SITE NARRATION",
+      "localStory": "local story",
+      "chapterFormat": "Chapter 01 / 01",
+      "voiceFormat": "Voice"
+    },
+    "audio": {
+      "loading": "Loading narration...",
+      "loadingData": "Loading data...",
+      "pauseNarration": "Pause narration",
+      "startNarration": "Start narration",
+      "playNarration": "Play narration",
+      "expand": "Expand player",
+      "collapse": "Collapse player",
+      "nowPlaying": "NOW PLAYING",
+      "ttsHQ": "TTS · HQ"
+    },
+    "partners": {
+      "heading": "EAT AND MEET AROUND HERE",
+      "continueStory": "CONTINUE THE STORY\nBEYOND THE FRAME",
+      "ledger": "PARTNER LEDGER",
+      "withinWalkingDistance": "Within walking distance",
+      "nearestOpen": "Nearest · open now",
+      "qrMenu": "QR MENU",
+      "noPartners": "No partners linked to this stop yet."
+    }
   }
 }

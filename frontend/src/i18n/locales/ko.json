@@ -339,5 +339,103 @@
     "anonymous": "관광객",
     "errorNoRating": "별점을 선택해 주세요.",
     "errorSubmit": "오류가 발생했습니다. 다시 시도해 주세요."
+  },
+  "interactiveMap": {
+    "openLocation": "위치 열기",
+    "mapViewport": "실제 OpenStreetMap 2.5D 지도",
+    "mapOfflineError": "OpenFreeMap 타일을 불러올 수 없습니다. 연결을 확인하여 2.5D 건물을 보세요.",
+    "viewMode": "지도 보기 각도",
+    "entity3D": "3D 개체",
+    "toggle3D": "3D 전환",
+    "mapControls": "지도 컨트롤",
+    "zoomIn": "확대",
+    "zoomOut": "축소",
+    "myLocation": "내 위치로 돌아가기",
+    "tapMarkerInstruction": "마커를 탭하여 전체 화면으로 위치 열기"
+  },
+  "cinematicPOI": {
+    "voiceRegions": {
+      "south": "남부",
+      "north": "북부",
+      "central": "중부"
+    },
+    "categories": {
+      "food": "길거리 음식",
+      "historical": "살아있는 유산",
+      "scenic": "야경",
+      "local": "지역 문화"
+    },
+    "categoryTitles": {
+      "food": "길거리 음식",
+      "historical": "살아있는 유산",
+      "local": "지역 문화"
+    },
+    "aria": {
+      "cinematicExperience": "시네마틱 체험",
+      "openingScene": "장소 오프닝",
+      "chapterOne": "이야기 첫 번째 장",
+      "chapterTwo": "이야기 두 번째 장",
+      "arrivalInfo": "도착 전 정보",
+      "partnersSection": "파트너 및 다음 지점",
+      "narrationControls": "내레이션 컨트롤",
+      "seekPosition": "재생 위치",
+      "playbackSpeed": "재생 속도",
+      "voiceSelection": "음성 선택"
+    },
+    "toolbar": {
+      "backToMap": "지도로 돌아가기",
+      "exploring": "탐색 중",
+      "saved": "저장됨",
+      "saveLocation": "위치 저장"
+    },
+    "opening": {
+      "defaultIntro": "이 장소 뒤에 숨겨진 이야기를 발견하세요.",
+      "scrollCue": "스크롤하여 이야기를 깊이 탐험 ↓"
+    },
+    "metadata": {
+      "distance": "거리",
+      "category": "카테고리",
+      "duration": "소요 시간",
+      "rating": "평점"
+    },
+    "story": {
+      "caption": "지역 이야기",
+      "story01": "이야기 01",
+      "chapter01": "01 · 기원",
+      "storyPeople": "이야기 / 사람들",
+      "chapter02": "02 · 리듬"
+    },
+    "arrival": {
+      "beforeYouArrive": "도착하기 전에",
+      "instructions": "천천히 가세요.\n잘 들으세요.\n나중에 맛보세요.",
+      "address": "주소",
+      "updating": "업데이트 중",
+      "access": "접근",
+      "accessMethods": "도보 · 오토바이",
+      "narrationNote": "현장 내레이션",
+      "localStory": "지역 이야기",
+      "chapterFormat": "제 01 / 01 장",
+      "voiceFormat": "음성"
+    },
+    "audio": {
+      "loading": "내레이션 로딩 중...",
+      "loadingData": "데이터 로딩 중...",
+      "pauseNarration": "내레이션 일시정지",
+      "startNarration": "내레이션 시작",
+      "playNarration": "내레이션 재생",
+      "expand": "플레이어 확장",
+      "collapse": "플레이어 축소",
+      "nowPlaying": "재생 중",
+      "ttsHQ": "TTS · HQ"
+    },
+    "partners": {
+      "heading": "근처에서 먹고 만나기",
+      "continueStory": "프레임 너머로\n이야기를 계속",
+      "ledger": "파트너 원장",
+      "withinWalkingDistance": "도보 거리 내",
+      "nearestOpen": "가장 가까움 · 영업 중",
+      "qrMenu": "QR 메뉴",
+      "noPartners": "이 정류장에는 아직 연결된 파트너가 없습니다."
+    }
   }
 }

@@ -232,7 +232,6 @@
 .tour-modal-body p { color: var(--sk-muted); font-size: .8rem; line-height: 1.5; }
 .tour-modal-actions { display: flex; gap: 8px; margin-top: 18px; }
 .tour-loading, .tour-empty { display: grid; min-height: 220px; place-items: center; padding: 24px; color: var(--sk-muted); text-align: center; }
-.tour-prototype-tools { margin-top: 22px; padding-top: 12px; border-top: 1px solid var(--sk-border); }
 .tour-narration-layer { position: fixed; inset: 0; z-index: 70; display: flex; align-items: flex-end; padding: 20px; background: rgba(25, 28, 29, .48); }
 
 /* 004 Offline */

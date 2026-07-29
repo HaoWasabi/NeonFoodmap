@@ -339,5 +339,103 @@
     "anonymous": "游客",
     "errorNoRating": "请选择星级评分。",
     "errorSubmit": "发生错误，请重试。"
+  },
+  "interactiveMap": {
+    "openLocation": "打开地点",
+    "mapViewport": "真实OpenStreetMap 2.5D地图",
+    "mapOfflineError": "无法加载OpenFreeMap图块。检查连接以查看2.5D建筑。",
+    "viewMode": "地图视角",
+    "entity3D": "3D实体",
+    "toggle3D": "切换3D",
+    "mapControls": "地图控制",
+    "zoomIn": "放大",
+    "zoomOut": "缩小",
+    "myLocation": "返回我的位置",
+    "tapMarkerInstruction": "点击标记打开全屏位置"
+  },
+  "cinematicPOI": {
+    "voiceRegions": {
+      "south": "南方",
+      "north": "北方",
+      "central": "中部"
+    },
+    "categories": {
+      "food": "街头美食",
+      "historical": "生活遗产",
+      "scenic": "夜景",
+      "local": "本地文化"
+    },
+    "categoryTitles": {
+      "food": "街头美食",
+      "historical": "生活遗产",
+      "local": "本地文化"
+    },
+    "aria": {
+      "cinematicExperience": "影院体验",
+      "openingScene": "地点开场",
+      "chapterOne": "故事第一章",
+      "chapterTwo": "故事第二章",
+      "arrivalInfo": "到达前信息",
+      "partnersSection": "合作伙伴和下一点",
+      "narrationControls": "旁白控制",
+      "seekPosition": "播放位置",
+      "playbackSpeed": "播放速度",
+      "voiceSelection": "语音选择"
+    },
+    "toolbar": {
+      "backToMap": "返回地图",
+      "exploring": "探索中",
+      "saved": "已保存",
+      "saveLocation": "保存地点"
+    },
+    "opening": {
+      "defaultIntro": "发现这个地方背后的故事。",
+      "scrollCue": "滚动深入了解故事 ↓"
+    },
+    "metadata": {
+      "distance": "距离",
+      "category": "类别",
+      "duration": "时长",
+      "rating": "评分"
+    },
+    "story": {
+      "caption": "本地故事",
+      "story01": "故事 01",
+      "chapter01": "01 · 起源",
+      "storyPeople": "故事 / 人物",
+      "chapter02": "02 · 节奏"
+    },
+    "arrival": {
+      "beforeYouArrive": "到达之前",
+      "instructions": "慢慢走。\n仔细听。\n之后品尝。",
+      "address": "地址",
+      "updating": "更新中",
+      "access": "访问",
+      "accessMethods": "步行 · 摩托车",
+      "narrationNote": "现场旁白",
+      "localStory": "本地故事",
+      "chapterFormat": "第 01 / 01 章",
+      "voiceFormat": "语音"
+    },
+    "audio": {
+      "loading": "加载旁白中...",
+      "loadingData": "加载数据中...",
+      "pauseNarration": "暂停旁白",
+      "startNarration": "开始旁白",
+      "playNarration": "播放旁白",
+      "expand": "展开播放器",
+      "collapse": "折叠播放器",
+      "nowPlaying": "正在播放",
+      "ttsHQ": "TTS · HQ"
+    },
+    "partners": {
+      "heading": "附近吃喝聚会",
+      "continueStory": "在画面之外\n继续故事",
+      "ledger": "合作伙伴账本",
+      "withinWalkingDistance": "步行距离内",
+      "nearestOpen": "最近 · 营业中",
+      "qrMenu": "二维码菜单",
+      "noPartners": "此站点尚无关联合作伙伴。"
+    }
   }
 }

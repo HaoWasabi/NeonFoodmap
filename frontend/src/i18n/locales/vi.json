@@ -114,7 +114,35 @@
     "notFound": "Không tìm thấy hành trình",
     "backToRoutes": "Quay lại danh sách",
     "relatedPOIs": "Các trạm dừng trong hành trình",
-    "unlocked": "Đã mở khóa"
+    "unlocked": "Đã mở khóa",
+    "searchPlaceholder": "TÌM HÀNH TRÌNH HOẶC TRẠM...",
+    "selectedRoute": "Lộ trình đang chọn",
+    "offRouteWarning": "[CẢNH BÁO] Bạn đã lệch khỏi tuyến",
+    "gpsActive": "GPS vẫn hoạt động",
+    "zoomIn": "Phóng to",
+    "zoomOut": "Thu nhỏ",
+    "tourContent": "Nội dung hành trình",
+    "tourDetailsCollapse": "Thu gọn bảng chi tiết",
+    "upShort": "UP",
+    "stopsUppercase": "TRẠM",
+    "minutesUppercase": "PHÚT",
+    "done": "✓",
+    "finishedTour": "Đã hoàn tất hành trình.",
+    "metersShort": "M"
+  },
+  "checkout": {
+    "unlockTourTitle": "Mở khóa hành trình",
+    "unlockDescription": "Mở toàn bộ trạm, audio thuyết minh chuyên nghiệp và bản tải ngoại tuyến cho hành trình này.",
+    "unlockContent": "Nội dung mở khóa",
+    "duration": "Thời hạn",
+    "forever": "VĨNH VIỄN",
+    "totalPayment": "Tổng thanh toán",
+    "initializing": "Đang khởi tạo...",
+    "continuePaypal": "Tiếp tục thanh toán PayPal",
+    "unlockSuccess": "Mở khóa thành công!",
+    "unlockSuccessDesc": "Bạn có thể bắt đầu tour premium ngay bây giờ.",
+    "startTourBtn": "Bắt đầu Tour",
+    "securePayment": "Thanh toán an toàn qua cổng PayPal. Môi trường thử nghiệm không trừ tiền thật."
   },
   "offline": {
     "title": "Tải Dữ Liệu Offline",
@@ -140,6 +168,15 @@
     "voiceNorthDesc": "Giọng đọc miền Bắc truyền thống",
     "voiceCentral": "Giọng Trung",
     "voiceCentralDesc": "Giọng đọc miền Trung",
+    "voiceSouthLabel": "Miền Nam",
+    "voiceNorthLabel": "Miền Bắc",
+    "voiceCentralLabel": "Miền Trung",
+    "searchPlaceholder": "TÌM CÀI ĐẶT...",
+    "topbarVoiceStatus": "VOICE · VI",
+    "routeMark": "VI",
+    "routeTitle": "Giọng Miền Nam",
+    "routeMeta": "VI · AUTO GEOFENCE ON",
+    "pageSubtitleRaw": "VOICE · LANGUAGE · ACCOUNT · PARTNER",
     "appInfo": "Thông tin ứng dụng",
     "appName": "Phố Ẩm Thực Vĩnh Khánh",
     "deviceInfo": "Thông tin thiết bị",
@@ -217,13 +254,13 @@
     "qrScanHint": "Quét mã QR để xem thông tin quán",
     "downloadQr": "Tải QR",
     "openLink": "Mở link",
-    "program": "Goc doi tac",
-    "portalTitle": "Trung tam doi tac nha hang",
-    "entryDescription": "Quan ly noi dung gioi thieu, menu, gio mo cua va hieu qua hien thi",
-    "poiLinked": "Lien ket: Pho Vinh Khanh - Q4, TP.HCM",
+    "program": "Góc đối tác",
+    "portalTitle": "Trung tâm đối tác nhà hàng",
+    "entryDescription": "Quản lý nội dung giới thiệu, menu, giờ mở cửa và hiệu quả hiển thị",
+    "poiLinked": "Liên kết: Phố Vĩnh Khánh - Q4, TP.HCM",
     "status": {
-      "pending": "Cho duyet",
-      "approved": "Da duyet"
+      "pending": "Chờ duyệt",
+      "approved": "Đã duyệt"
     },
     "contentSection": "Nội dung giới thiệu",
     "ttsFallback": "Audio ưu tiên, TTS dự phòng",
@@ -243,12 +280,12 @@
     },
     "performanceTitle": "Hiệu quả hiển thị",
     "stats": {
-      "impression": "Lượt hiện thị thẻ đối tác",
+      "impression": "Lượt hiển thị thẻ đối tác",
       "interaction": "Lượt tương tác",
       "menuView": "Lượt xem menu",
-      "conversion": "Tỉ lệ chuyển đổi"
+      "conversion": "Tỷ lệ chuyển đổi"
     },
-    "saveDraft": "Lưu bản nhập đối tác",
+    "saveDraft": "Lưu bản nháp đối tác",
     "savedAt": "Đã lưu lúc {{time}}"
   },
   "partnerPortal": {
@@ -422,5 +459,103 @@
     "total": "Tổng tiền",
     "paid": "Đã thanh toán",
     "unpaid": "Chưa thanh toán"
+  },
+  "interactiveMap": {
+    "openLocation": "Mở địa điểm",
+    "mapViewport": "Bản đồ thật OpenStreetMap 2.5D",
+    "mapOfflineError": "Không tải được tile OpenFreeMap. Kiểm tra kết nối để xem nhà 2.5D.",
+    "viewMode": "Góc nhìn bản đồ",
+    "entity3D": "Thực thể 3D",
+    "toggle3D": "Tắt bật 3D",
+    "mapControls": "Điều khiển bản đồ",
+    "zoomIn": "Phóng to",
+    "zoomOut": "Thu nhỏ",
+    "myLocation": "Về vị trí của tôi",
+    "tapMarkerInstruction": "Chạm marker để mở toàn màn hình địa điểm"
+  },
+  "cinematicPOI": {
+    "voiceRegions": {
+      "south": "Miền Nam",
+      "north": "Miền Bắc",
+      "central": "Miền Trung"
+    },
+    "categories": {
+      "food": "Ẩm thực đường phố",
+      "historical": "Di sản đời sống",
+      "scenic": "Cảnh quan đêm",
+      "local": "Văn hóa địa phương"
+    },
+    "categoryTitles": {
+      "food": "ẨM THỰC ĐƯỜNG PHỐ",
+      "historical": "DI SẢN ĐỜI SỐNG",
+      "local": "VĂN HÓA ĐỊA PHƯƠNG"
+    },
+    "aria": {
+      "cinematicExperience": "Trải nghiệm cinematic",
+      "openingScene": "Mở đầu địa điểm",
+      "chapterOne": "Chương một của câu chuyện",
+      "chapterTwo": "Chương hai của câu chuyện",
+      "arrivalInfo": "Thông tin trước khi đến",
+      "partnersSection": "Đối tác và điểm tiếp theo",
+      "narrationControls": "Bộ điều khiển thuyết minh",
+      "seekPosition": "Vị trí phát",
+      "playbackSpeed": "Tốc độ phát",
+      "voiceSelection": "Chọn giọng đọc"
+    },
+    "toolbar": {
+      "backToMap": "Trở lại bản đồ",
+      "exploring": "ĐANG KHÁM PHÁ",
+      "saved": "Đã lưu",
+      "saveLocation": "Lưu điểm"
+    },
+    "opening": {
+      "defaultIntro": "Khám phá câu chuyện đằng sau địa điểm này.",
+      "scrollCue": "CUỘN ĐỂ ĐI SÂU VÀO CÂU CHUYỆN ↓"
+    },
+    "metadata": {
+      "distance": "KHOẢNG CÁCH",
+      "category": "THỂ LOẠI",
+      "duration": "THỜI LƯỢNG",
+      "rating": "ĐÁNH GIÁ"
+    },
+    "story": {
+      "caption": "CÂU CHUYỆN ĐỊA PHƯƠNG",
+      "story01": "STORY 01",
+      "chapter01": "01 · KHỞI NGUỒN",
+      "storyPeople": "STORY / PEOPLE",
+      "chapter02": "02 · NHỊP SỐNG"
+    },
+    "arrival": {
+      "beforeYouArrive": "TRƯỚC KHI BẠN ĐẾN",
+      "instructions": "ĐI CHẬM.\nNGHE KỸ.\nNẾM SAU.",
+      "address": "ĐỊA CHỈ",
+      "updating": "Đang cập nhật",
+      "access": "TRUY CẬP",
+      "accessMethods": "Đi bộ · Xe máy",
+      "narrationNote": "THUYẾT MINH TẠI ĐIỂM",
+      "localStory": "câu chuyện địa phương",
+      "chapterFormat": "Chương 01 / 01",
+      "voiceFormat": "Giọng"
+    },
+    "audio": {
+      "loading": "Đang tải giọng đọc...",
+      "loadingData": "Đang tải dữ liệu...",
+      "pauseNarration": "Tạm dừng thuyết minh",
+      "startNarration": "Bắt đầu thuyết minh",
+      "playNarration": "Phát thuyết minh",
+      "expand": "Mở rộng trình phát",
+      "collapse": "Thu gọn trình phát",
+      "nowPlaying": "CHƯƠNG ĐANG PHÁT",
+      "ttsHQ": "TTS · HQ"
+    },
+    "partners": {
+      "heading": "ĂN VÀ GẶP GỠ QUANH ĐÂY",
+      "continueStory": "TIẾP TỤC CÂU CHUYỆN\nNGOÀI KHUNG HÌNH",
+      "ledger": "PARTNER LEDGER",
+      "withinWalkingDistance": "Trong bán kính đi bộ",
+      "nearestOpen": "Gần nhất · đang mở",
+      "qrMenu": "QR MENU",
+      "noPartners": "Chưa có đối tác liên kết cho điểm dừng này."
+    }
   }
 }
