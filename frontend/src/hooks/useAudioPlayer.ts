@@ -328,13 +328,13 @@ export function useAudioPlayer({ onEnded, onTimeUpdate }: UseAudioPlayerOptions 
         seek(currentTimeRef.current + seconds);
     }, [seek]);
 
-    const speakTTS = useCallback((text: string, lang = 'vi-VN', retryCount = 0) => {
+    const speakTTS = useCallback((text: string, lang = 'vi-VN') => {
         const targetLang = lang.replace('_', '-').toLowerCase();
         const targetPrefix = targetLang.split('-')[0];
 
         // Ưu tiên Google Translate TTS qua Audio element (giọng tự nhiên, hỗ trợ tiếng Việt)
         // Giống cách POI narration dùng file audio → đọc đúng giọng mọi ngôn ngữ
-        const useGoogleTTS = () => {
+        const playGoogleTTS = () => {
             isTTSRef.current = false; // Dùng Audio element, không phải Web Speech API
             const audio = getAudio();
             
@@ -395,7 +395,7 @@ export function useAudioPlayer({ onEnded, onTimeUpdate }: UseAudioPlayerOptions 
         setIsLoading(true);
 
         // Thử Google Translate TTS trước (giọng tự nhiên cho mọi ngôn ngữ bao gồm tiếng Việt)
-        useGoogleTTS();
+        playGoogleTTS();
     }, [getAudio, updateDuration, updateCurrentTime, updateIsPlaying, playTTSFromCurrentTime]);
 
     useEffect(() => {

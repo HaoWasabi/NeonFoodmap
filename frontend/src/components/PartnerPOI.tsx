@@ -159,7 +159,7 @@ export default function PartnerPOI() {
     };
 
     void fetchMyPoi();
-  }, []);
+  }, [t]);
 
   const poiMediaList = useMemo(() => (Array.isArray(poi?.media) ? poi.media : []), [poi?.media]);
   const poiMediaLanguages = useMemo(
@@ -208,7 +208,7 @@ export default function PartnerPOI() {
     return () => {
       cancelled = true;
     };
-  }, [poi?.id]);
+  }, [poi?.id, t]);
 
   const refreshMapQr = () => {
     if (!poi?.id) return;
@@ -293,7 +293,7 @@ export default function PartnerPOI() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [formData.latitude, formData.longitude]);
+  }, [formData.latitude, formData.longitude, t]);
 
   if (loading) {
     return <section className="mx-4 mt-4 rounded-2xl border border-slate-100 bg-white p-4 text-sm text-slate-500 shadow-sm">{t('partnerPortal.loadingPoi')}</section>;
