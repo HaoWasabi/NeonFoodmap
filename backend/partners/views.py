@@ -571,21 +571,26 @@ class PartnerTTSView(APIView):
         if cached_url:
             return Response({'audio_url': cached_url, 'cached': True})
 
-        # Kiểm tra xem đã có audio file trong PartnerIntroMedia (DB)
+        # Kiểm tra PartnerIntroMedia — ưu tiên file_url trực tiếp (TTS auto-gen)
         from pois.models import PartnerIntroMedia
-        from core.models import Media as CoreMedia
         existing = partner.intro_media.filter(language=lang, status=1).first()
         if existing:
-            try:
-                core_media = CoreMedia.objects.get(pk=existing.media_id)
-                if core_media.file_url:
-                    # Cache URL 24 giờ
-                    cache.set(cache_key, core_media.file_url, 86400)
-                    return Response({'audio_url': core_media.file_url, 'cached': True})
-            except CoreMedia.DoesNotExist:
-                pass
+            # Ưu tiên file_url trực tiếp (sinh bởi signal)
+            if existing.file_url:
+                cache.set(cache_key, existing.file_url, 86400)
+                return Response({'audio_url': existing.file_url, 'cached': True})
+            # Fallback: media_id → core.Media (file upload thủ công)
+            if existing.media_id:
+                try:
+                    from core.models import Media as CoreMedia
+                    core_media = CoreMedia.objects.get(pk=existing.media_id)
+                    if core_media.file_url:
+                        cache.set(cache_key, core_media.file_url, 86400)
+                        return Response({'audio_url': core_media.file_url, 'cached': True})
+                except CoreMedia.DoesNotExist:
+                    pass
 
-        # Xác định text để sinh TTS
+        # Xác định text để sinh TTS on-demand (fallback khi signal chưa kịp chạy)
         text = partner.intro_text or ''
         if not text.strip():
             return Response(
@@ -604,9 +609,6 @@ class PartnerTTSView(APIView):
                 pass  # Giữ text gốc
 
         # Sinh TTS audio bằng gTTS → upload Cloudinary → trả URL
-        # URL Cloudinary ổn định theo public_id (bcsd/tts-audio/{slug}_{lang})
-        # → lần sau cùng partner + ngôn ngữ sẽ overwrite cùng file → URL giữ nguyên
-        # → Browser + CDN cache audio file → load nhanh từ lần 2 trở đi
         from pois.signals import _generate_tts_and_upload
         audio_url = _generate_tts_and_upload(text, lang or 'vi', partner.business_name)
 
@@ -616,7 +618,21 @@ class PartnerTTSView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        # Cache URL 24 giờ để lần sau trả ngay (< 1ms)
+        # Lưu vào PartnerIntroMedia để lần sau không phải sinh lại
+        from pois.models import PartnerIntroMedia as PIM
+        PIM.objects.update_or_create(
+            partner=partner,
+            language=lang,
+            voice_region='',
+            defaults={
+                'file_url': audio_url,
+                'tts_content': text,
+                'media_id': None,
+                'status': PIM.Status.ACTIVE,
+            },
+        )
+
+        # Cache URL 24 giờ
         cache.set(cache_key, audio_url, 86400)
 
         return Response({'audio_url': audio_url, 'cached': False})

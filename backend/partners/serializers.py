@@ -51,8 +51,8 @@ class PartnerPublicSerializer(serializers.ModelSerializer):
 
         # Kiểm tra nếu có bản dịch sẵn (PartnerIntroMedia) cho ngôn ngữ yêu cầu
         intro = obj.intro_media.filter(language=lang, status=1).first()
-        if intro and hasattr(intro, 'translated_text') and intro.translated_text:
-            return intro.translated_text
+        if intro and intro.tts_content:
+            return intro.tts_content
 
         # Nếu ngôn ngữ yêu cầu == 'vi' → trả intro_text gốc
         if lang == 'vi':
@@ -70,7 +70,7 @@ class PartnerPublicSerializer(serializers.ModelSerializer):
             return obj.intro_text
 
     def get_intro_audio(self, obj):
-        """Trả về danh sách audio files cho narration (có file_url từ core.Media)."""
+        """Trả về danh sách audio files cho narration (ưu tiên file_url trực tiếp)."""
         request = self.context.get('request')
         lang = 'vi'
         if request:
@@ -79,7 +79,6 @@ class PartnerPublicSerializer(serializers.ModelSerializer):
                 accept_lang = request.headers.get('Accept-Language', 'vi')
                 lang = accept_lang.split(',')[0].split('-')[0].lower()
 
-        from core.models import Media as CoreMedia
         intro_medias = obj.intro_media.filter(status=1)
         if lang and lang != 'vi':
             # Ưu tiên ngôn ngữ được yêu cầu, fallback sang vi
@@ -90,19 +89,21 @@ class PartnerPublicSerializer(serializers.ModelSerializer):
 
         results = []
         for im in intro_medias[:5]:
-            file_url = ''
-            tts_content = ''
-            try:
-                core_media = CoreMedia.objects.get(pk=im.media_id)
-                file_url = core_media.file_url or ''
-            except CoreMedia.DoesNotExist:
-                pass
+            file_url = im.file_url or ''
+            # Fallback: nếu không có file_url trực tiếp, thử lấy từ core.Media
+            if not file_url and im.media_id:
+                try:
+                    from core.models import Media as CoreMedia
+                    core_media = CoreMedia.objects.get(pk=im.media_id)
+                    file_url = core_media.file_url or ''
+                except Exception:
+                    pass
             results.append({
                 'id': im.id,
                 'language': im.language,
                 'voice_region': im.voice_region,
                 'file_url': file_url,
-                'tts_content': tts_content,
+                'tts_content': im.tts_content or '',
             })
         return results
 
