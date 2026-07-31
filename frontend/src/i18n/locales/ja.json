@@ -38,6 +38,8 @@
     "offlineMode": "オフラインモード"
   },
   "tour": {
+    "stopNavigation": "スポット移動",
+    "previousStop": "前のスポット",
     "title": "ガイドツアー",
     "tabOverview": "概要",
     "tabRoute": "ルート",

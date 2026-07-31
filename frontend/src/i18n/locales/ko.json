@@ -38,6 +38,8 @@
     "offlineMode": "오프라인 모드"
   },
   "tour": {
+    "stopNavigation": "정류장 이동",
+    "previousStop": "이전 정류장",
     "title": "가이드 투어",
     "tabOverview": "개요",
     "tabRoute": "경로",

@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Circle, Polyline, Marker, Popup, useMap, useMa
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useTranslation } from 'react-i18next';
-import type { Language, Media, Partner, POI, Tour, TourReview } from '../types';
+import { DEFAULT_VOICE_REGION, type Language, type Media, type Partner, type POI, type Tour, type TourReview } from '../types';
 import SketchFrame, { SketchIcon } from '../components/SketchFrame';
 import ReviewForm from '../components/ReviewForm';
 import PremiumTourCheckout from '../components/PremiumTourCheckout';
@@ -118,7 +118,7 @@ export default function GuidedTour() {
   const poiTitle = (poi: POI) => poi.translated_name || poi.name;
 
   const handleNarrationReady = useCallback((poi: POI, media: Media | null, partners: Partner[]) => { setNarrationData({ poi, media, partners }); openNarration(poi, media, partners); }, [openNarration]);
-  const { triggerNarration, finishNarration } = useNarrationEngine({ language: (i18n.language || localStorage.getItem('bcsd_language') || user?.preferred_language || 'vi') as Language, voiceRegion: user?.preferred_voice_region || 'mien_nam', onNarrationReady: handleNarrationReady, onNarrationConflict: (poi) => dispatch({ type: 'PUSH_TO_QUEUE', payload: poi }) });
+  const { triggerNarration, finishNarration } = useNarrationEngine({ language: (i18n.language || localStorage.getItem('bcsd_language') || user?.preferred_language || 'vi') as Language, voiceRegion: DEFAULT_VOICE_REGION, onNarrationReady: handleNarrationReady, onNarrationConflict: (poi) => dispatch({ type: 'PUSH_TO_QUEUE', payload: poi }) });
   useEffect(() => { triggerNarrationRef.current = triggerNarration; }, [triggerNarration]);
   useEffect(() => { if (!tourStarted || narrationData || narrationQueue.length === 0) return; const timer = window.setTimeout(() => { const poi = narrationQueue[0]; dispatch({ type: 'REMOVE_FROM_QUEUE' }); triggerNarrationRef.current?.(poi, 'QR'); }, 300); return () => window.clearTimeout(timer); }, [dispatch, narrationData, narrationQueue, tourStarted]);
   useGeofence({ pois: tourStarted ? poisForGeofence : [], position: position || null, onEnter: (poi) => { triggerNarration(poi, 'AUTO'); const idx = orderedPOIs.findIndex(({ poi: item }) => item.id === poi.id); if (idx >= currentPOIIndex) setCurrentPOIIndex(idx + 1); } });
@@ -130,6 +130,9 @@ export default function GuidedTour() {
     if (!selectedTour) return;
     if (selectedTour.is_premium && !selectedTour.is_unlocked) { setShowPremiumCheckout(true); return; }
     setTourStarted((value) => !value);
+  };
+  const changeStop = (direction: -1 | 1) => {
+    setCurrentPOIIndex((index) => Math.max(0, Math.min(orderedPOIs.length, index + direction)));
   };
   const filteredTours = tours.filter((tour) => !search || `${tour.name} ${descriptionOf(tour)}`.toLowerCase().includes(search.toLowerCase()));
 
@@ -162,7 +165,6 @@ export default function GuidedTour() {
       <div className="progress-block">
         <div className="progress-top">
           <strong id="progressCopy">{t('tour.completed')} {completed} {t('tour.outOf')} {orderedPOIs.length} {t('tour.stopsLower')}</strong>
-          <span className="sketch-mono" id="progressPercent">{progress}%</span>
         </div>
         <div className="progress-track"><span id="progressBar" style={{ width: `${progress}%` }} /></div>
       </div>
@@ -180,6 +182,14 @@ export default function GuidedTour() {
           </button>
         </article>
       ) : <p className="tour-intro">{t('tour.allCompleted')}</p>}
+      <div className="stop-navigation" aria-label={t('tour.stopNavigation')}>
+        <button className="sketch-btn sketch-btn-outline" type="button" disabled={currentPOIIndex === 0} onClick={() => changeStop(-1)}>
+          <SketchIcon name="chevron-left" /> {t('tour.previousStop')}
+        </button>
+        <button className="sketch-btn sketch-btn-primary" type="button" disabled={currentPOIIndex >= orderedPOIs.length} onClick={() => changeStop(1)}>
+          {t('tour.nextStop')} <SketchIcon name="chevron-right" />
+        </button>
+      </div>
       <div className="tour-section-label"><h2>{t('tour.upNext')}</h2></div>
       <div className="next-list" id="nextList">
         {orderedPOIs.slice(currentPOIIndex + 1, currentPOIIndex + 3).map((item, offset) => (
@@ -296,6 +306,14 @@ export default function GuidedTour() {
         </>
       ) : <p className="mobile-intro">{t('tour.finishedTour')}</p>}
     </div>
+    <div className="stop-navigation" aria-label={t('tour.stopNavigation')}>
+      <button className="sketch-btn sketch-btn-outline" type="button" disabled={currentPOIIndex === 0} onClick={() => changeStop(-1)}>
+        <SketchIcon name="chevron-left" /> {t('tour.previousStop')}
+      </button>
+      <button className="sketch-btn sketch-btn-primary" type="button" disabled={currentPOIIndex >= orderedPOIs.length} onClick={() => changeStop(1)}>
+        {t('tour.nextStop')} <SketchIcon name="chevron-right" />
+      </button>
+    </div>
     <div className="mobile-next">
       {orderedPOIs.slice(currentPOIIndex + 1, currentPOIIndex + 3).map((item, offset) => (
         <div className="next-row" key={item.poi.id}>
@@ -383,7 +401,7 @@ export default function GuidedTour() {
 
 
   return (
-    <SketchFrame active="tours" className="tour-frame" searchPlaceholder={t('tour.searchPlaceholder')} searchValue={search} onSearchChange={setSearch} routeMark={String(currentPOIIndex + 1).padStart(2, '0')} routeTitle={titleOf(selectedTour)} routeMeta={tourMeta} routeProgress={progress} hideTopbar={true}>
+    <SketchFrame active="tours" className="tour-frame" searchPlaceholder={t('tour.searchPlaceholder')} searchValue={search} onSearchChange={setSearch} routeMark={String(Math.min(currentPOIIndex + 1, orderedPOIs.length)).padStart(2, '0')} routeTitle={titleOf(selectedTour)} routeMeta={tourMeta} routeProgress={progress} hideTopbar={true}>
       <div className="tour-page">
         <style>{`
           .desktop-view { height: 100%; display: block; min-height: 0; }

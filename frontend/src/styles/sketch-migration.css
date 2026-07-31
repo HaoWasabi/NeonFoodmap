@@ -185,6 +185,10 @@
 .focus-copy strong { display: block; margin: 3px 0; font-size: .82rem; }
 .focus-copy span:last-child { font-family: var(--sk-mono); font-size: .6rem; color: var(--sk-muted); }
 .focus-play { margin-right: 12px; }
+.stop-navigation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.stop-navigation .sketch-btn { justify-content: center; }
+.stop-navigation .sketch-btn:disabled { cursor: not-allowed; opacity: .45; }
+.stop-navigation .sketch-icon { width: 16px; height: 16px; }
 .next-list, .ledger-view { margin-top: 12px; border-top: 1px solid var(--sk-ink); }
 .next-row, .ledger-row { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 15px 0; border-bottom: 1px solid var(--sk-border); }
 .next-row-num, .ledger-no { font-family: var(--sk-display); font-size: 1.25rem; color: var(--sk-muted); }
@@ -325,6 +329,7 @@
 .settings-row strong { display: block; font-size: .8rem; }
 .settings-row small { display: block; margin-top: 4px; color: var(--sk-muted); font-size: .68rem; line-height: 1.4; }
 .settings-voice { display: grid; grid-template-columns: repeat(3,1fr); border: 1px solid var(--sk-ink); }
+.settings-row:has(.settings-voice), .fmap002-voice-switcher, .sketch-field:has(.partner-voice) { display: none; }
 .settings-voice button, .settings-language-row { min-height: 40px; border: 0; border-right: 1px solid var(--sk-ink); background: var(--sk-surface); color: inherit; cursor: pointer; font-size: .68rem; font-weight: 800; }
 .settings-voice button:last-child { border-right: 0; }
 .settings-voice button.is-active, .settings-language-row.is-active { background: var(--sk-primary); color: #fff; }
@@ -392,6 +397,9 @@
 .sketch-password button { align-self: stretch; border: 0; padding: 0 12px; background: transparent; color: var(--sk-muted); cursor: pointer; font-family: var(--sk-mono); font-size: .58rem; font-weight: 700; }
 .sketch-auth-error { padding: 10px; border: 1px solid var(--sk-danger); background: #f7e9e6; color: var(--sk-danger); font-size: .72rem; }
 .sketch-auth-note { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--sk-border); color: var(--sk-muted); font-size: .68rem; line-height: 1.5; }
+.sketch-auth-note strong, .sketch-auth-note span { display: block; }
+.sketch-auth-note strong { color: var(--sk-ink); font-size: .78rem; text-transform: uppercase; }
+.sketch-auth-note .sketch-btn { width: 100%; margin-top: 10px; }
 .sketch-auth-note a { color: var(--sk-tertiary); font-weight: 800; }
 .sketch-auth-submit { width: 100%; font-family: var(--sk-display); font-size: 1rem; }
 .sketch-auth-link { display: block; margin-top: 14px; color: var(--sk-tertiary); text-align: center; font-size: .72rem; font-weight: 800; }
@@ -609,6 +617,7 @@
   .mobile-focus .sketch-label { color: var(--sk-primary); }
   .mobile-focus strong { display: block; font-size: .86rem; margin: 4px 0; }
   .mobile-focus span { font-family: var(--sk-mono); font-size: .61rem; color: var(--sk-muted); }
+  .mobile-plan .stop-navigation { margin-top: 12px; }
   .mobile-next { margin-top: 14px; border-top: 1px solid var(--sk-ink); }
   .mobile-next .next-row { padding: 12px 0; }
   .mobile-nav { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 2px solid var(--sk-ink); background: var(--sk-surface); z-index: 14; height: 68px; }

@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 
-const globalAudio = typeof window !== 'undefined' ? new Audio() : null;
 export let lastUnlockTime = 0;
 
 export function unlockAudioAndTTS() {
@@ -13,18 +12,15 @@ export function unlockAudioAndTTS() {
             }
             lastUnlockTime = Date.now();
         }
-        // Unlock HTML5 Audio with a throwaway element. Never use globalAudio
-        // here: its play() promise may resolve after the real narration has
-        // replaced the source and would then pause the real narration.
-        if (globalAudio && globalAudio.paused) {
-            const probe = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
-            probe.volume = 0.01;
-            void probe.play().then(() => {
-                probe.pause();
-                probe.removeAttribute('src');
-                probe.load();
-            }).catch(() => { /* ignore */ });
-        }
+        // Unlock HTML5 Audio with a throwaway element. Each player owns its
+        // own Audio instance, so this probe must never touch an active player.
+        const probe = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+        probe.volume = 0.01;
+        void probe.play().then(() => {
+            probe.pause();
+            probe.removeAttribute('src');
+            probe.load();
+        }).catch(() => { /* ignore */ });
     }
 }
 
@@ -74,6 +70,13 @@ export function useAudioPlayer({ onEnded, onTimeUpdate }: UseAudioPlayerOptions 
     const ttsTimerRef = useRef<number | null>(null);
     const ttsStartTimeoutRef = useRef<number | null>(null);
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+    // Do not share a single Audio element between independent UI surfaces.
+    // In particular, loading the partner ledger used to replace the POI
+    // narration source while its async media lookup was still in flight.
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    if (typeof window !== 'undefined' && !audioRef.current) {
+        audioRef.current = new Audio();
+    }
 
     const updateCurrentTime = useCallback((time: number) => {
         setCurrentTime(time);
@@ -92,7 +95,10 @@ export function useAudioPlayer({ onEnded, onTimeUpdate }: UseAudioPlayerOptions 
     }, []);
 
     const getAudio = useCallback(() => {
-        return globalAudio as HTMLAudioElement;
+        if (!audioRef.current) {
+            throw new Error('Audio player is unavailable outside the browser');
+        }
+        return audioRef.current;
     }, []);
 
     const blobUrlRef = useRef<string | null>(null);

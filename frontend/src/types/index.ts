@@ -2,6 +2,7 @@
 
 export type Language = 'vi' | 'en' | 'zh' | 'ja' | 'ko';
 export type VoiceRegion = 'mien_nam' | 'mien_bac' | 'mien_trung' | 'usa' | 'uk';
+export const DEFAULT_VOICE_REGION: VoiceRegion = 'mien_nam';
 export type TriggerType = 'AUTO' | 'QR';
 export type POICategory = 'food' | 'historical' | 'cultural' | 'scenic';
 

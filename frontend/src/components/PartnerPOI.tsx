@@ -90,7 +90,7 @@ function MapSelector({
 }
 
 export default function PartnerPOI() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [poi, setPoi] = useState<POI | null>(null);
   const [loading, setLoading] = useState(true);
   /** Thông báo nhẹ (vd. chưa có POI — không phải lỗi). */
@@ -305,7 +305,7 @@ export default function PartnerPOI() {
       setPlayingMediaId(null);
     } else if (formData.description.trim()) {
       setPlayingMediaId(null);
-      speakTTS(formData.description.trim(), 'vi-VN');
+      speakTTS(formData.description.trim(), languageToBCP47(i18n.language));
     }
   };
 

@@ -38,6 +38,8 @@
     "offlineMode": "离线模式"
   },
   "tour": {
+    "stopNavigation": "站点导航",
+    "previousStop": "上一站",
     "title": "导览行程",
     "tabOverview": "概览",
     "tabRoute": "路线",

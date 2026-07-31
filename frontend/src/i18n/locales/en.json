@@ -45,6 +45,8 @@
     "offlineMode": "Offline Mode"
   },
   "tour": {
+    "stopNavigation": "Stop navigation",
+    "previousStop": "Previous stop",
     "title": "Guided Tour",
     "tabOverview": "Overview",
     "tabRoute": "Route",
@@ -402,6 +404,10 @@
     "loginSubtitle": "Sign in to restore purchased tours and content.",
     "signupSubtitle": "Link current device with your NeonFoodmap account.",
     "demoNotice": "Demo mode: Backend auth not ready, you can still enter the app.",
+    "guestContinueTitle": "Do not want to create an account?",
+    "guestContinueDescription": "Continue as a guest to explore the map on this device. Purchases and cross-device sync require a real account.",
+    "continueAsGuest": "Continue as guest",
+    "guestLoginFailed": "Cannot create a guest session. Please check your connection and try again.",
     "username": "Username",
     "usernamePlaceholder": "user_vinhkhanh",
     "email": "Email",
