@@ -165,13 +165,22 @@ export default function MapExplore() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.search]);
 
-    const openPoi = useCallback((poi: POI, triggerType: 'AUTO' | 'QR' = 'AUTO') => {
+    const openPoi = useCallback((poi: POI, triggerType: 'AUTO' | 'QR' = 'QR') => {
         unlockAudioAndTTS();
-        setActivePoi(poi);
         setClosingPoi(null);
         setSearchQuery('');
         setShowSearchResults(false);
-        triggerNarration(poi, triggerType);
+
+        if (triggerType === 'QR') {
+            setActivePoi(poi);
+            void triggerNarration(poi, 'QR');
+        } else {
+            void triggerNarration(poi, 'AUTO').then((triggered) => {
+                if (triggered) {
+                    setActivePoi(poi);
+                }
+            });
+        }
     }, [triggerNarration]);
 
     useGeofence({
@@ -280,7 +289,7 @@ export default function MapExplore() {
                     isMocking={isMocking}
                     permissionStatus={permissionStatus}
                     isRecenterRequested={isRecenterRequested}
-                    onOpenPoi={(poi) => openPoi(poi, 'AUTO')}
+                    onOpenPoi={(poi) => openPoi(poi, 'QR')}
                     onMapClick={handleMapClick}
                     onLocate={handleLocate}
                 />

@@ -59,11 +59,11 @@ export default function UserAuth() {
         mode === 'login'
           ? await loginUserAccount({ email: email.trim(), password })
           : await signupUserAccount({
-              email: email.trim(),
-              username: username.trim(),
-              password,
-              password_confirm: confirmPassword,
-            });
+            email: email.trim(),
+            username: username.trim(),
+            password,
+            password_confirm: confirmPassword,
+          });
 
       dispatch({ type: 'SET_USER', payload: userForAppState(session.user) });
       navigate('/map', { replace: true });

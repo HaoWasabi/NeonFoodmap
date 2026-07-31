@@ -165,21 +165,29 @@ apiClient.interceptors.request.use((config) => {
         url.includes('/payments/partner-premium') ||
         (url.includes('/media') && config.method?.toLowerCase() !== 'get');
         
-    if (isPartnerRoute) {
-        const session = getPartnerAuthSession();
-        if (session?.access) {
-            config.headers.Authorization = `Bearer ${session.access}`;
-        }
-    } else {
-        const session = getUserAuthSession();
-        if (session?.access) {
-            config.headers.Authorization = `Bearer ${session.access}`;
+    const isAuthRoute =
+        url.includes('/login/') ||
+        url.includes('/register/') ||
+        url.includes('/guest-login/') ||
+        url.includes('/refresh/');
+
+    if (!isAuthRoute) {
+        if (isPartnerRoute) {
+            const session = getPartnerAuthSession();
+            if (session?.access) {
+                config.headers.Authorization = `Bearer ${session.access}`;
+            }
         } else {
-            // Fallback: nếu không có User session nhưng có Partner session
-            // (ví dụ: partner gọi PayPal endpoints từ Partner Portal)
-            const partnerSession = getPartnerAuthSession();
-            if (partnerSession?.access) {
-                config.headers.Authorization = `Bearer ${partnerSession.access}`;
+            const session = getUserAuthSession();
+            if (session?.access) {
+                config.headers.Authorization = `Bearer ${session.access}`;
+            } else {
+                // Fallback: nếu không có User session nhưng có Partner session
+                // (ví dụ: partner gọi PayPal endpoints từ Partner Portal)
+                const partnerSession = getPartnerAuthSession();
+                if (partnerSession?.access) {
+                    config.headers.Authorization = `Bearer ${partnerSession.access}`;
+                }
             }
         }
     }
@@ -495,12 +503,25 @@ export const getApiErrorMessage = (error: unknown, fallback = 'Có lỗi xảy r
 
     const status = error.response?.status;
     const responseData = error.response?.data;
-    if (typeof responseData === 'string') return responseData;
+    if (typeof responseData === 'string') {
+        if (responseData.trim().startsWith('<') || responseData.includes('<!DOCTYPE html>') || responseData.includes('<html')) {
+            return fallback;
+        }
+        return responseData;
+    }
 
     if (responseData && typeof responseData === 'object') {
         if ('detail' in responseData) {
             const msg = normalizeDrfDetail((responseData as { detail: unknown }).detail);
-            if (msg) return msg;
+            if (msg) {
+                if (msg.includes('No active account found with the given credentials')) {
+                    return 'Email hoặc mật khẩu không chính xác. Nếu chưa có tài khoản, vui lòng chuyển sang tab "Tạo tài khoản".';
+                }
+                if (msg.includes('Given token not valid')) {
+                    return 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn.';
+                }
+                return msg;
+            }
         }
         if ('error' in responseData && typeof responseData.error === 'string') return responseData.error;
         if ('message' in responseData && typeof responseData.message === 'string') return responseData.message;
@@ -510,6 +531,7 @@ export const getApiErrorMessage = (error: unknown, fallback = 'Có lỗi xảy r
         if (typeof firstField === 'string') return firstField;
     }
 
+    if (status === 401) return 'Email hoặc mật khẩu không chính xác.';
     if (status === 403) return 'Bạn không có quyền thực hiện thao tác này.';
     if (status === 404) return 'Không tìm thấy dữ liệu.';
     return fallback;
