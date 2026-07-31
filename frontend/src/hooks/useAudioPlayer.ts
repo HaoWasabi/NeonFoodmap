@@ -338,33 +338,18 @@ export function useAudioPlayer({ onEnded, onTimeUpdate }: UseAudioPlayerOptions 
         const targetLang = lang.replace('_', '-').toLowerCase();
         const targetPrefix = targetLang.split('-')[0];
 
-        // Ưu tiên Google Translate TTS qua Audio element (giọng tự nhiên, hỗ trợ tiếng Việt)
-        // Giống cách POI narration dùng file audio → đọc đúng giọng mọi ngôn ngữ
-        const playGoogleTTS = () => {
+        // Sử dụng Backend TTS Preview Endpoint thay vì gọi trực tiếp Google TTS
+        // Việc này ngăn Tracking Prevention chặn request và đảm bảo CORS hợp lệ.
+        const playBackendTTS = () => {
             isTTSRef.current = false; // Dùng Audio element, không phải Web Speech API
             const audio = getAudio();
             
-            // Google Translate TTS: cắt text thành chunks <= 200 ký tự (giới hạn URL)
             const maxLen = 200;
-            const chunks: string[] = [];
-            let remaining = text;
-            while (remaining.length > 0) {
-                if (remaining.length <= maxLen) {
-                    chunks.push(remaining);
-                    break;
-                }
-                // Tìm điểm cắt tại dấu câu gần nhất
-                let cutAt = remaining.lastIndexOf('.', maxLen);
-                if (cutAt < 50) cutAt = remaining.lastIndexOf(',', maxLen);
-                if (cutAt < 50) cutAt = remaining.lastIndexOf(' ', maxLen);
-                if (cutAt < 50) cutAt = maxLen;
-                chunks.push(remaining.substring(0, cutAt + 1));
-                remaining = remaining.substring(cutAt + 1).trim();
-            }
-
-            // Tạo URL cho chunk đầu tiên (single audio play cho đơn giản)
-            const firstChunk = chunks[0] || text.substring(0, maxLen);
-            const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${targetPrefix}&q=${encodeURIComponent(firstChunk)}`;
+            const firstChunk = text.substring(0, maxLen);
+            const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+            
+            // Encode URI components
+            const ttsUrl = `${API_BASE_URL}/tts-preview/?text=${encodeURIComponent(firstChunk)}&lang=${targetPrefix}`;
             
             audio.src = ttsUrl;
             audio.playbackRate = playbackRateRef.current;
@@ -377,8 +362,8 @@ export function useAudioPlayer({ onEnded, onTimeUpdate }: UseAudioPlayerOptions 
                 updateIsPlaying(true);
                 setIsLoading(false);
             }).catch((e) => {
-                console.warn('[TTS] Google Translate TTS failed, falling back to Web Speech API:', e);
-                // Fallback sang Web Speech API nếu Google TTS bị block
+                console.warn('[TTS] Backend TTS failed, falling back to Web Speech API:', e);
+                // Fallback sang Web Speech API nếu backend lỗi
                 fallbackToWebSpeech();
             });
         };
@@ -400,8 +385,8 @@ export function useAudioPlayer({ onEnded, onTimeUpdate }: UseAudioPlayerOptions 
 
         setIsLoading(true);
 
-        // Thử Google Translate TTS trước (giọng tự nhiên cho mọi ngôn ngữ bao gồm tiếng Việt)
-        playGoogleTTS();
+        // Thử Backend TTS trước (giọng tự nhiên cho mọi ngôn ngữ bao gồm tiếng Việt)
+        playBackendTTS();
     }, [getAudio, updateDuration, updateCurrentTime, updateIsPlaying, playTTSFromCurrentTime]);
 
     useEffect(() => {

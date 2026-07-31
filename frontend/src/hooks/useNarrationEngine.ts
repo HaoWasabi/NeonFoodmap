@@ -54,12 +54,12 @@ export function useNarrationEngine({
      * Kích hoạt thuyết minh (tự động hoặc quét QR)
      */
     const triggerNarration = useCallback(
-        async (poi: POI, triggerType: 'AUTO' | 'QR' = 'AUTO') => {
+        async (poi: POI, triggerType: 'AUTO' | 'QR' = 'AUTO'): Promise<boolean> => {
             // 1. Kiểm tra conflict (đang phát POI khác)
             if (isPlayingRef.current && currentPoiRef.current?.id !== poi.id) {
                 console.log(LOG_PREFIX, 'Conflict detected for:', poi.name);
                 onNarrationConflict(poi);
-                return;
+                return false;
             }
 
             // 2. Kiểm tra Anti-Spam cho trigger AUTO
@@ -70,7 +70,7 @@ export function useNarrationEngine({
                     if (diff < ANTI_SPAM_MINUTES * 60 * 1000) {
                         console.warn(LOG_PREFIX, 'Skip auto narration (Anti-spam) for:', poi.name, 
                             'Remaining:', Math.ceil((ANTI_SPAM_MINUTES * 60 * 1000 - diff) / 1000), 's');
-                        return;
+                        return false;
                     }
                 }
             }
@@ -105,7 +105,7 @@ export function useNarrationEngine({
             }
 
             if (requestId !== narrationRequestIdRef.current || !isPlayingRef.current || currentPoiRef.current?.id !== poi.id) {
-                return;
+                return false;
             }
 
             saveLocalLog(logEntry);
@@ -120,7 +120,7 @@ export function useNarrationEngine({
             ]);
 
             if (requestId !== narrationRequestIdRef.current || !isPlayingRef.current || currentPoiRef.current?.id !== poi.id) {
-                return;
+                return false;
             }
 
             let media = fetchedMedia;
@@ -134,6 +134,7 @@ export function useNarrationEngine({
             // 6. Notify UI
             console.log(LOG_PREFIX, 'Narration ready for:', poi.name, 'Media:', media ? `${media.language} (${media.media_type})` : 'TTS Fallback');
             onNarrationReady(poi, media, partners);
+            return true;
         },
         [language, voiceRegion, onNarrationReady, onNarrationConflict]
     );

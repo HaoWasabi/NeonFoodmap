@@ -300,4 +300,10 @@ if os.getenv('BEHIND_HTTPS_PROXY', '').lower() in ('1', 'true', 'yes'):
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
 
+# FIX FOR MARIADB UUID TRUNCATION BUG
+# Force Django to serialize UUIDs without hyphens (using .hex) because our MariaDB schema uses char(32).
+# Without this, Django 5 detects native UUID support and passes hyphenated strings which are truncated to 32 chars.
+from django.db.backends.mysql.features import DatabaseFeatures
+DatabaseFeatures.has_native_uuid_field = False
+
 
